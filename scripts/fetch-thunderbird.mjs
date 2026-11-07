@@ -2,7 +2,7 @@
 // so the test never starts a Thunderbird that is installed on this machine.
 //
 // Usage: node scripts/fetch-thunderbird.mjs [version]
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -46,8 +46,9 @@ async function fetchThunderbird(version) {
   fs.mkdirSync(dir, { recursive: true });
   const setup = path.join(dir, "setup.exe");
   fs.writeFileSync(setup, data);
-  // Unpacks the program files only. Nothing is installed or registered.
-  execFileSync(setup, [`/ExtractDir=${dir}`]);
+  // Unpacks the program files only. Nothing is installed or registered. The
+  // installer exits with 1 here even on success, so the result is checked below.
+  spawnSync(setup, [`/ExtractDir=${dir}`]);
   fs.rmSync(setup);
   if (!fs.existsSync(binary)) {
     throw new Error(`Extraction did not produce ${binary}`);
