@@ -10,4 +10,6 @@ browser.allMailPlus.onNotice.addListener(message =>
 
 browser.storage.onChanged.addListener(async () => browser.allMailPlus.configure(await loadConfig()));
 
+browser.browserAction.onClicked.addListener(() => browser.runtime.openOptionsPage());
+
 loadConfig().then(config => browser.allMailPlus.start(config));

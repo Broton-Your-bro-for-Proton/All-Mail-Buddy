@@ -317,6 +317,31 @@ try {
   );
 
   await check(
+    "status explains unmatched messages",
+    client,
+    `
+    const status = () => {
+      const o = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
+      Services.obs.notifyObservers(o, "allmailplus-status");
+      return JSON.parse(o.data).accounts[0];
+    };
+    await until(() => status().coverage?.reasons?.["no-copy"] >= 1, "coverage with reasons");
+    const { coverage } = status();
+    if (coverage.reasons.size != 1) throw new Error("size reason: " + JSON.stringify(coverage));
+    if (!Object.keys(coverage.sizeDeltas).every(d => Number(d) > 0)) throw new Error("size delta: " + JSON.stringify(coverage));
+    `
+  );
+
+  await check(
+    "toolbar button is shown",
+    client,
+    `
+    await until(() => window.document.documentElement.outerHTML.includes("allmailplus"), "toolbar button");
+    `
+  );
+  await screenshot(client, "toolbar");
+
+  await check(
     "cards view shows the location badge in All Mail",
     client,
     `
@@ -534,6 +559,23 @@ try {
     `
   );
 
+  await check(
+    "settings page loads without script errors",
+    client,
+    `
+    const url = WebExtensionPolicy.getByID(args[0]).getURL("options/options.html");
+    window.document.getElementById("tabmail").openTab("contentTab", { url });
+    await sleep(2500);
+    const errors = Services.console.getMessageArray()
+      .filter(m => m instanceof Ci.nsIScriptError && !(m.flags & Ci.nsIScriptError.warningFlag))
+      .filter(m => m.sourceName?.includes("/options/"))
+      .map(m => m.errorMessage);
+    if (errors.length) throw new Error(errors.join("; "));
+    `,
+    addon
+  );
+  await screenshot(client, "options");
+
   if (results.some(r => !r.ok)) {
     const log = await client.run(
       chrome(`
@@ -546,20 +588,6 @@ try {
     console.log(["console:", ...log].join("\n  "));
   }
 
-  if (shots) {
-    const url = await client.run(
-      chrome(`
-        const policy = WebExtensionPolicy.getByID(args[0]);
-        const url = policy.getURL("options/options.html");
-        window.document.getElementById("tabmail").openTab("contentTab", { url });
-        await sleep(2500);
-        return url;
-      `),
-      addon
-    );
-    console.log(`options page ${url}`);
-    await screenshot(client, "options");
-  }
 } catch (e) {
   console.log(`FAIL harness\n     ${e.stack}`);
   results.push({ name: "harness", ok: false });

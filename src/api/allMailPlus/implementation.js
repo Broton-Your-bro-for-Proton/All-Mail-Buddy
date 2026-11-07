@@ -199,6 +199,7 @@ const controller = {
         state: "indexing",
         lastSync: previous.get(server.key)?.lastSync ?? null,
         coverage: null,
+        unreadable: new Set(),
         error: "",
       });
       this.initColumnState(allMail);
@@ -248,8 +249,10 @@ const controller = {
       db = folder.msgDatabase;
     } catch {
       account.index.setFolder(folder.URI, info, []);
+      account.unreadable.add(info.name);
       return;
     }
+    account.unreadable.delete(info.name);
     const keys = db.listAllKeys();
     this.scanning.add(folder.URI);
     const entries = [];
@@ -300,8 +303,13 @@ const controller = {
     this.debounce(`coverage:${account.key}`, 2000, () => this.updateCoverage(account));
   },
 
+  /**
+   * Counts how All Mail resolves. For messages without a match it records why,
+   * and how far size (bytes) and date (seconds) are off from the closest copy.
+   */
   async updateCoverage(account) {
-    const coverage = { unique: 0, ambiguous: 0, missing: 0 };
+    const coverage = { unique: 0, ambiguous: 0, missing: 0, reasons: {}, sizeDeltas: {}, dateDeltas: {} };
+    const count = (map, key) => (map[key] = (map[key] ?? 0) + 1);
     try {
       const db = account.allMail.msgDatabase;
       const keys = db.listAllKeys();
@@ -309,7 +317,19 @@ const controller = {
         if (i % 2000 == 1999) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
-        coverage[account.index.resolve(this.entryOf(db.getMsgHdrForKey(keys[i]))).status]++;
+        const entry = this.entryOf(db.getMsgHdrForKey(keys[i]));
+        const result = account.index.resolve(entry);
+        coverage[result.status]++;
+        if (result.reason) {
+          count(coverage.reasons, result.reason);
+          const [closest] = result.candidates;
+          if (closest && closest.size != entry.size) {
+            count(coverage.sizeDeltas, closest.size - entry.size);
+          }
+          if (closest && closest.date != entry.date) {
+            count(coverage.dateDeltas, Math.round((closest.date - entry.date) / 1e6));
+          }
+        }
       }
     } catch {}
     account.coverage = coverage;
@@ -516,8 +536,9 @@ const controller = {
       badge = card.ownerDocument.createElement("span");
       badge.className = "allmailplus-badge";
       badge.style.cssText =
-        "margin-inline-end: 6px; padding: 0 5px; border: 1px solid #45b29d; border-radius: 3px;" +
-        "color: #45b29d; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+        "margin-inline-end: 6px; padding: 0 5px; border: 1px solid currentColor; border-radius: 3px;" +
+        "color: light-dark(#9a6a00, #f9be03); font-size: 0.85em; white-space: nowrap; overflow: hidden;" +
+        "text-overflow: ellipsis;";
       card.querySelector(".thread-card-dynamic-row")?.prepend(badge);
     }
     badge.textContent = text;
@@ -997,6 +1018,7 @@ const controller = {
           state: account?.state ?? (enabled ? "pending" : "disabled"),
           lastSync: account?.lastSync ?? null,
           coverage: account?.coverage ?? null,
+          unreadable: [...(account?.unreadable ?? [])],
           error: account?.error ?? "",
           ...(account?.index.stats() ?? { folders: 0, messages: 0 }),
         };

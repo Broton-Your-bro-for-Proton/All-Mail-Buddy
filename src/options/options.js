@@ -10,6 +10,41 @@ function cell(text, className = "") {
   return td;
 }
 
+const REASONS = {
+  "no-copy": "no copy in a real folder",
+  "label-only": "only in label folders",
+  size: "size differs",
+  date: "date differs",
+  "size-date": "size and date differ",
+};
+
+const topDeltas = (map, unit) =>
+  Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([delta, n]) => `${delta > 0 ? "+" : ""}${delta} ${unit} (${n}x)`)
+    .join(", ");
+
+/** Why All Mail messages were not matched, as plain sentences. */
+function diagnosisText(account) {
+  const { coverage, unreadable } = account;
+  const lines = [];
+  if (coverage?.missing) {
+    const reasons = Object.entries(coverage.reasons).map(([key, n]) => `${n} ${REASONS[key] ?? key}`);
+    lines.push(`Not found: ${reasons.join(", ")}.`);
+    if (Object.keys(coverage.sizeDeltas).length) {
+      lines.push(`Size of the closest copy is off by: ${topDeltas(coverage.sizeDeltas, "bytes")}.`);
+    }
+    if (Object.keys(coverage.dateDeltas).length) {
+      lines.push(`Date of the closest copy is off by: ${topDeltas(coverage.dateDeltas, "s")}.`);
+    }
+  }
+  if (unreadable?.length) {
+    lines.push(`Folders that could not be read: ${unreadable.join(", ")}.`);
+  }
+  return lines.join(" ");
+}
+
 function coverageText(coverage) {
   if (!coverage) {
     return "";
@@ -50,8 +85,17 @@ async function render() {
         cell(coverageText(account.coverage)),
         cell(account.lastSync ? new Date(account.lastSync).toLocaleString() : "")
       );
-      return tr;
-    })
+      const diagnosis = diagnosisText(account);
+      if (!diagnosis) {
+        return [tr];
+      }
+      const details = document.createElement("tr");
+      details.className = "details";
+      const td = cell(diagnosis, "muted");
+      td.colSpan = 7;
+      details.append(td);
+      return [tr, details];
+    }).flat()
   );
   $("empty").hidden = status.accounts.length > 0;
   $("notice").textContent = status.lastNotice || "None.";

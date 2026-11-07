@@ -1,44 +1,19 @@
-/* Colors follow Calibre-Web: default theme for light, caliBlur for dark. */
+/* Dark Calibre-Web look (caliBlur): dark grays with gold and amber accents. */
 :root {
-  --page: #f2f2f2;
-  --panel: #f5f5f5;
-  --panel-border: #ccc;
-  --navbar: #222;
-  --navbar-text: #fff;
-  --text: #444;
-  --muted: #999;
-  --accent: #45b29d;
-  --accent-text: #fff;
-  --accent-hover: #3a9886;
-  --default-btn: #fff;
-  --default-btn-text: #444;
-  --row-hover: rgba(153, 153, 153, 0.2);
-  --ok: #45b29d;
-  --warn: #cc7b19;
-  --error: #d9534f;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #474747;
-    --panel: #323232;
-    --panel-border: rgba(0, 0, 0, 0.3);
-    --navbar: #282828;
-    --navbar-text: #eee;
-    --text: #eee;
-    --muted: hsla(0, 0%, 100%, 0.45);
-    --accent: #f9be03;
-    --accent-text: #282828;
-    --accent-hover: #ffd34d;
-    --default-btn: #cc7b19;
-    --default-btn-text: #fff;
-    --row-hover: hsla(0, 0%, 100%, 0.06);
-    --ok: #f9be03;
-    --warn: #e59029;
-    --error: #ce3d2a;
-    color-scheme: dark;
-  }
+  --page: #1f1f1f;
+  --panel: #282828;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --navbar: #191a1c;
+  --text: #eee;
+  --muted: hsla(0, 0%, 100%, 0.45);
+  --gold: #f9be03;
+  --gold-hover: #ffd34d;
+  --amber: #cc7b19;
+  --amber-hover: #e59029;
+  --on-gold: #191a1c;
+  --row-hover: hsla(0, 0%, 100%, 0.06);
+  --error: #ce3d2a;
+  color-scheme: dark;
 }
 
 * {
@@ -58,11 +33,11 @@ body {
   gap: 12px;
   padding: 12px 16px;
   background: var(--navbar);
-  color: var(--navbar-text);
+  border-bottom: 1px solid var(--panel-border);
 }
 
 .brand {
-  color: var(--accent);
+  color: var(--gold);
   font-size: 20px;
   font-weight: 700;
 }
@@ -88,6 +63,7 @@ main {
 h2 {
   margin: 0 0 8px;
   font-size: 18px;
+  color: var(--gold);
 }
 
 .muted {
@@ -111,6 +87,11 @@ td {
   white-space: nowrap;
 }
 
+tr.details td {
+  white-space: normal;
+  padding-top: 0;
+}
+
 th {
   color: var(--muted);
   font-weight: 600;
@@ -125,13 +106,13 @@ tbody tr:hover {
 }
 
 .state-ready {
-  color: var(--ok);
+  color: var(--gold);
 }
 
 .state-indexing,
 .state-syncing,
 .state-pending {
-  color: var(--warn);
+  color: var(--amber-hover);
 }
 
 .state-error {
@@ -147,30 +128,28 @@ tbody tr:hover {
 
 .btn {
   padding: 6px 14px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid transparent;
   border-radius: 4px;
   font: inherit;
   cursor: pointer;
 }
 
 .btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
+  background: var(--gold);
+  color: var(--on-gold);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
+  background: var(--gold-hover);
 }
 
 .btn-default {
-  background: var(--default-btn);
-  color: var(--default-btn-text);
+  background: var(--amber);
+  color: #fff;
 }
 
 .btn-default:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--amber-hover);
 }
 
 .btn:disabled {
@@ -186,7 +165,7 @@ tbody tr:hover {
 }
 
 input[type="checkbox"] {
-  accent-color: var(--accent);
+  accent-color: var(--gold);
 }
 
 input[type="number"] {
