@@ -49,6 +49,7 @@ const controller = {
   scanning: new Set(), // folder uris whose snapshot is being taken
   dirty: new Set(), // folder uris that changed during their snapshot
   pendingSync: false,
+  refreshedAt: new Map(), // folder uri -> time of the last targeted sync
   syncTimer: null,
   lastNotice: "",
 
@@ -102,6 +103,7 @@ const controller = {
     this.timers.clear();
     this.scanning.clear();
     this.dirty.clear();
+    this.refreshedAt.clear();
     clearTimeout(this.syncTimer);
     resourceHandler().setSubstitution(RESOURCE_HOST, null);
     ThreadPaneColumns.removeCustomColumn(LOCATION_COLUMN);
@@ -199,6 +201,7 @@ const controller = {
         state: "indexing",
         lastSync: previous.get(server.key)?.lastSync ?? null,
         coverage: null,
+        unreadable: new Set(),
         error: "",
       });
       this.initColumnState(allMail);
@@ -248,8 +251,10 @@ const controller = {
       db = folder.msgDatabase;
     } catch {
       account.index.setFolder(folder.URI, info, []);
+      account.unreadable.add(info.name);
       return;
     }
+    account.unreadable.delete(info.name);
     const keys = db.listAllKeys();
     this.scanning.add(folder.URI);
     const entries = [];
@@ -300,8 +305,14 @@ const controller = {
     this.debounce(`coverage:${account.key}`, 2000, () => this.updateCoverage(account));
   },
 
+  /**
+   * Counts how All Mail resolves. For messages without a match it records why,
+   * and how far size (bytes) and date (seconds) are off from the closest copy.
+   */
   async updateCoverage(account) {
-    const coverage = { unique: 0, ambiguous: 0, missing: 0 };
+    const coverage = { unique: 0, ambiguous: 0, missing: 0, reasons: {}, sizeDeltas: {}, dateDeltas: {} };
+    const count = (map, key) => (map[key] = (map[key] ?? 0) + 1);
+    const stale = new Set();
     try {
       const db = account.allMail.msgDatabase;
       const keys = db.listAllKeys();
@@ -309,10 +320,48 @@ const controller = {
         if (i % 2000 == 1999) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
-        coverage[account.index.resolve(this.entryOf(db.getMsgHdrForKey(keys[i]))).status]++;
+        const entry = this.entryOf(db.getMsgHdrForKey(keys[i]));
+        const result = account.index.resolve(entry);
+        coverage[result.status]++;
+        core.staleUris(result).forEach(uri => stale.add(uri));
+        if (result.reason) {
+          count(coverage.reasons, result.reason);
+          const [closest] = result.candidates;
+          if (closest && closest.size != entry.size) {
+            count(coverage.sizeDeltas, closest.size - entry.size);
+          }
+          if (closest && closest.date != entry.date) {
+            count(coverage.dateDeltas, Math.round((closest.date - entry.date) / 1e6));
+          }
+        }
       }
     } catch {}
     account.coverage = coverage;
+    this.refreshFolders(account, stale, 10 * 60000).catch(console.error);
+  },
+
+  /**
+   * Syncs folders that look out of date and rescans them. Each folder is synced
+   * at most once per minAge, which also stops coverage and refresh from looping.
+   */
+  async refreshFolders(account, uris, minAge) {
+    if (account.server.type != "imap") {
+      return;
+    }
+    const now = Date.now();
+    const due = [...uris].filter(uri => now - (this.refreshedAt.get(uri) ?? 0) > minAge).slice(0, 25);
+    for (const uri of due) {
+      this.refreshedAt.set(uri, now);
+      const folder = MailServices.folderLookup.getFolderForURL(uri);
+      if (folder && account.index.hasFolder(uri)) {
+        await this.updateFolder(folder);
+        await this.scanFolder(account, folder);
+      }
+    }
+    if (due.length) {
+      this.coverageLater(account);
+      this.refreshColumns();
+    }
   },
 
   // ---- syncing -------------------------------------------------------------
@@ -345,6 +394,7 @@ const controller = {
           }
           if (folder != account.allMail) {
             await this.scanFolder(account, folder);
+            this.refreshedAt.set(folder.URI, Date.now());
           }
         }
         account.lastSync = Date.now();
@@ -486,14 +536,15 @@ const controller = {
   },
 
   registerColumns() {
+    const names = this.config.columnNames ?? {};
     ThreadPaneColumns.addCustomColumn(LOCATION_COLUMN, {
-      name: "Location",
+      name: names.folder || "Folder",
       hidden: true,
       sortable: true,
       textCallback: hdr => this.locationText(hdr),
     });
     ThreadPaneColumns.addCustomColumn(LABELS_COLUMN, {
-      name: "Labels",
+      name: names.labels || "Labels",
       hidden: true,
       sortable: true,
       textCallback: hdr => this.labelsText(hdr),
@@ -516,8 +567,9 @@ const controller = {
       badge = card.ownerDocument.createElement("span");
       badge.className = "allmailplus-badge";
       badge.style.cssText =
-        "margin-inline-end: 6px; padding: 0 5px; border: 1px solid #45b29d; border-radius: 3px;" +
-        "color: #45b29d; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+        "margin-inline-end: 6px; padding: 0 5px; border: 1px solid currentColor; border-radius: 3px;" +
+        "color: light-dark(#9a6a00, #f9be03); font-size: 0.85em; white-space: nowrap; overflow: hidden;" +
+        "text-overflow: ellipsis;";
       card.querySelector(".thread-card-dynamic-row")?.prepend(badge);
     }
     badge.textContent = text;
@@ -740,9 +792,12 @@ const controller = {
     for (const hdr of hdrs) {
       let real = hdr;
       if (this.isAllMail(hdr.folder)) {
-        real = this.verifiedMatch(this.accountFor(hdr.folder), hdr);
+        const account = this.accountFor(hdr.folder);
+        real = this.verifiedMatch(account, hdr);
         if (!real) {
           failed++;
+          const stale = core.staleUris(account.index.resolve(this.entryOf(hdr)));
+          this.refreshFolders(account, stale, 30000).catch(console.error);
           continue;
         }
       }
@@ -781,7 +836,8 @@ const controller = {
     if (failed) {
       this.notice(
         `${failed} of ${hdrs.length} selected messages could not be matched to exactly one real folder. ` +
-          "Nothing was changed. Wait until indexing is done or use the real folder."
+          "Nothing was changed. The folders involved are being synced again, so try again in a few seconds, " +
+          "or use the real folder."
       );
       return;
     }
@@ -997,6 +1053,7 @@ const controller = {
           state: account?.state ?? (enabled ? "pending" : "disabled"),
           lastSync: account?.lastSync ?? null,
           coverage: account?.coverage ?? null,
+          unreadable: [...(account?.unreadable ?? [])],
           error: account?.error ?? "",
           ...(account?.index.stats() ?? { folders: 0, messages: 0 }),
         };

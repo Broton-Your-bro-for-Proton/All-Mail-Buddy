@@ -72,6 +72,31 @@ test("treats copies with another size or date as different messages", () => {
   assert.deepEqual(index.resolve({ id: "b@x", size: 200, date: 7 }).labels, []);
 });
 
+test("explains why a message has no match", () => {
+  const index = sampleIndex();
+  index.setFolder("lbl", { kind: "label", name: "L" }, [{ key: 1, id: "labelonly@x", size: 1, date: 1 }]);
+  const reason = msg => index.resolve(msg).reason;
+  assert.equal(reason({ id: "nope@x", size: 1, date: 1 }), "no-copy");
+  assert.equal(reason({ id: "labelonly@x", size: 1, date: 1 }), "label-only");
+  assert.equal(reason({ id: "a@x", size: 99, date: 5 }), "size");
+  assert.equal(reason({ id: "a@x", size: 100, date: 9 }), "date");
+  assert.equal(reason({ id: "a@x", size: 99, date: 9 }), "size-date");
+  assert.equal(reason({ id: "a@x", size: 100, date: 5 }), "");
+  assert.deepEqual(
+    index.resolve({ id: "a@x", size: 99, date: 5 }).candidates.map(c => c.uri),
+    ["inbox"]
+  );
+});
+
+test("names folders that may be out of date", () => {
+  const index = sampleIndex();
+  const { staleUris } = require("../src/lib/core.js");
+  assert.deepEqual(staleUris(index.resolve({ id: "b@x", size: 200, date: 6 })), []);
+  assert.deepEqual(staleUris(index.resolve({ id: "twin@x", size: 400, date: 8 })).sort(), ["inbox2", "sent"]);
+  assert.deepEqual(staleUris(index.resolve({ id: "a@x", size: 99, date: 5 })), ["inbox"]);
+  assert.deepEqual(staleUris(index.resolve({ id: "nope@x", size: 1, date: 1 })), []);
+});
+
 test("reports missing messages", () => {
   const result = sampleIndex().resolve({ id: "nope@x", size: 1, date: 1 });
   assert.equal(result.status, "missing");

@@ -117,7 +117,9 @@ var AllMailCore = (() => {
      *
      * @param {{id: string, size: number, date: number}} msg
      * @returns {{status: "unique"|"ambiguous"|"missing", matches: object[],
-     *   location: string, labels: string[]}}
+     *   location: string, labels: string[], reason: string, candidates: object[]}}
+     *   reason (only when missing): "no-copy", "label-only", "size", "date" or
+     *   "size-date"; candidates are the real copies with the same Message-ID.
      */
     resolve({ id, size, date }) {
       const refs = [...(this.byId.get(id) ?? [])];
@@ -125,13 +127,26 @@ var AllMailCore = (() => {
       // same size and date. A copy that differs is another message.
       const narrow = list => list.filter(r => r.size == size && r.date == date);
       const ofKind = kind => refs.filter(r => this.folders.get(r.uri).kind == kind);
-      const matches = narrow(ofKind("real"));
+      const candidates = ofKind("real");
+      const matches = narrow(candidates);
       const names = list => [...new Set(list.map(r => this.folders.get(r.uri).name))];
+      let reason = "";
+      if (!matches.length) {
+        if (!candidates.length) {
+          reason = refs.length ? "label-only" : "no-copy";
+        } else {
+          const sizeOk = candidates.some(r => r.size == size);
+          const dateOk = candidates.some(r => r.date == date);
+          reason = sizeOk ? "date" : dateOk ? "size" : "size-date";
+        }
+      }
       return {
         status: ["missing", "unique"][matches.length] ?? "ambiguous",
         matches,
         location: names(matches).join(", "),
         labels: names(narrow(ofKind("label"))).sort(),
+        reason,
+        candidates,
       };
     }
 
@@ -144,7 +159,18 @@ var AllMailCore = (() => {
     }
   }
 
-  return { isBridgeRoot, classify, LocationIndex };
+  /**
+   * Folders whose local copy may be out of date for a resolve result. Proton
+   * keeps a message in exactly one folder, so several matching copies, or a
+   * copy with another size or date, point to a folder Thunderbird has not
+   * synced since the message changed.
+   */
+  function staleUris(result) {
+    const refs = result.status == "ambiguous" ? result.matches : result.candidates;
+    return result.status == "unique" ? [] : [...new Set(refs.map(r => r.uri))];
+  }
+
+  return { isBridgeRoot, classify, LocationIndex, staleUris };
 })();
 
 if (typeof module == "object") {
