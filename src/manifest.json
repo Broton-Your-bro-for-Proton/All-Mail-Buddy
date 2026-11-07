@@ -1,0 +1,27 @@
+{
+  "manifest_version": 2,
+  "name": "All Mail+",
+  "version": "0.1.0",
+  "description": "Shows the real folder of every message in Proton Mail Bridge's All Mail folder and makes delete, move, archive and junk act on the real message.",
+  "author": "HyperCriSiS",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "allmailplus@hypercrisis",
+      "strict_min_version": "153.0"
+    }
+  },
+  "icons": { "64": "icons/icon.svg" },
+  "permissions": ["storage", "notifications"],
+  "background": { "scripts": ["background.js"] },
+  "options_ui": { "page": "options/options.html", "open_in_tab": true },
+  "experiment_apis": {
+    "allMailPlus": {
+      "schema": "api/allMailPlus/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "paths": [["allMailPlus"]],
+        "script": "api/allMailPlus/implementation.js"
+      }
+    }
+  }
+}
