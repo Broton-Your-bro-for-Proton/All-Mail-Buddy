@@ -502,8 +502,11 @@ try {
     client,
     `
     let win = await select("orphan");
+    const undoItems = window.messenger.transactionManager.numberOfUndoItems;
     win.commandController.doCommand("cmd_deleteMessage");
     await until(() => has("Trash", "orphan"), "orphan copied to Trash");
+    // Undo would expunge the Trash copy, which Proton deletes for good.
+    if (window.messenger.transactionManager.numberOfUndoItems != undoItems) throw new Error("orphan copy is undoable");
     await until(() => cell("allMailPlusLocation", "All Mail", "orphan") == "Trash", "orphan location");
     win = await select("orphanmove");
     win.commandController.doCommand("cmd_moveMessage", folder("Folders/Shops"));

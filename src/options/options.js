@@ -11,8 +11,6 @@ function cell(text, className = "") {
 }
 
 const REASONS = {
-  "no-copy": "no copy in a real folder",
-  "label-only": "only in label folders",
   size: "size differs",
   date: "date differs",
   "size-date": "size and date differ",

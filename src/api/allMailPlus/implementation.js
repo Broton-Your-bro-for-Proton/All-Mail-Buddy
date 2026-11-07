@@ -908,8 +908,11 @@ const controller = {
   },
 
   isOrphan(account, hdr) {
+    // Only trust "no folder" when every folder was read; otherwise the real copy
+    // may sit in a folder the index does not know yet.
     return (
-      account.state != "indexing" &&
+      account.state == "ready" &&
+      !account.unreadable.size &&
       !(hdr.flags & Ci.nsMsgMessageFlags.IMAPDeleted) &&
       account.index.resolve(this.entryOf(hdr)).status == "nofolder"
     );
@@ -1050,7 +1053,9 @@ const controller = {
         break;
     }
     for (const [allMail, list, target] of orphanCopies) {
-      MailServices.copy.copyMessages(allMail, list, target, false, listener, msgWindow, true);
+      // No undo: undoing an IMAP copy expunges it, which Proton treats as a
+      // permanent delete when the copy went to Trash or Spam.
+      MailServices.copy.copyMessages(allMail, list, target, false, listener, msgWindow, false);
       touched.add(target);
     }
     // Native code may have prepared a selection jump for a row removal that
@@ -1152,9 +1157,11 @@ const controller = {
     for (const folder of folders) {
       this.rescanLater(folder);
     }
-    for (const allMail of this.byFolder(allMailHdrs).keys()) {
-      if (allMail.server.type == "imap") {
-        this.debounce(`update:${allMail.URI}`, 1500, () => this.updateFolder(allMail));
+    // IMAP copies report no new headers, so fetch them to update the columns
+    // soon. Loading a folder rescans it.
+    for (const folder of [...folders, ...this.byFolder(allMailHdrs).keys()]) {
+      if (folder.server.type == "imap") {
+        this.debounce(`update:${folder.URI}`, 1500, () => this.updateFolder(folder));
       }
     }
     this.refreshColumns();

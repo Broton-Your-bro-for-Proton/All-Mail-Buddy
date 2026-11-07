@@ -66,7 +66,10 @@ delete copies to Trash (also with Shift+Delete, since Proton only deletes for
 good from Trash), move and drag copy to the target, archive copies to the
 account's Archive folder, and junk copies to Spam or Trash depending on the
 junk setting. The All Mail entry stays, and the column then shows the new
-folder.
+folder. These copies cannot be undone with Ctrl+Z: undoing an IMAP copy
+expunges it, and Proton deletes for good what is expunged from Trash or Spam.
+Messages are only treated as having no folder once every folder was indexed
+and read.
 
 ## Junk
 
