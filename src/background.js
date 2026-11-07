@@ -11,7 +11,7 @@ const columnNames = {
 const loadConfig = async () => ({ ...(await browser.storage.local.get(DEFAULTS)), columnNames });
 
 browser.allMailPlus.onNotice.addListener(message =>
-  browser.notifications.create({ type: "basic", title: "All Mail+", message, iconUrl: "icons/icon.svg" })
+  browser.notifications.create({ type: "basic", title: "All Mail Buddy", message, iconUrl: "icons/icon.svg" })
 );
 
 browser.storage.onChanged.addListener(async () => browser.allMailPlus.configure(await loadConfig()));
