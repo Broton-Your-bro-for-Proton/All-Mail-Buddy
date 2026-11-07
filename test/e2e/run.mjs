@@ -12,7 +12,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { binaryFor, FAKESERVER_DIR } from "../../scripts/fetch-thunderbird.mjs";
+import { binaryFor, FAKESERVER_DIR, FAKESERVER_NAMES } from "../../scripts/fetch-thunderbird.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const binary = process.argv[2] ?? process.env.TB_BINARY ?? binaryFor();
@@ -20,7 +20,7 @@ if (!fs.existsSync(binary)) {
   console.error(`Thunderbird not found at ${binary}. Run "npm run setup:thunderbird" first.`);
   process.exit(1);
 }
-if (!fs.existsSync(path.join(FAKESERVER_DIR, "mailnews", "Imapd.sys.mjs"))) {
+if (!FAKESERVER_NAMES.every(name => fs.existsSync(path.join(FAKESERVER_DIR, "mailnews", name)))) {
   console.error(`Fake IMAP server not found in ${FAKESERVER_DIR}. Run "npm run setup:thunderbird" first.`);
   process.exit(1);
 }
@@ -749,13 +749,24 @@ try {
         return "* SEARCH" + hits.map(m => " " + (uid ? m.uid : messages.indexOf(m) + 1)).join("") + "\\0OK SEARCH COMPLETED";
       },
     };
+    // Counts STATUS commands, to see how often the add-on checks for changes.
+    const statusCount = {
+      preload(handler) {
+        handler._countedSTATUS = handler.STATUS;
+      },
+      STATUS(statusArgs) {
+        window.allMailPlusTest.statuses++;
+        return this._countedSTATUS(statusArgs);
+      },
+    };
     const server = new nsMailServer(d => {
       const handler = new IMAP_RFC3501_handler(d);
       mixinExtension(handler, headerSearch);
+      mixinExtension(handler, statusCount);
       return handler;
     }, daemon);
     server.start();
-    window.allMailPlusTest = { daemon, server, put, idOf, uri, literal, ImapMessage, searches: 0 };
+    window.allMailPlusTest = { daemon, server, put, idOf, uri, literal, ImapMessage, searches: 0, statuses: 0 };
     for (const [box, id, subject] of [["Folders/Shops", "shop", "Shop order"], ["Folders/Finanzen", "bill", "Bill"], ["Folders/Shops", "stale", "Old message"]]) {
       put(box, id, subject);
       put("All Mail", id, subject);
@@ -809,8 +820,27 @@ try {
     t.put("Folders/Finanzen", "new", "New bill");
     t.put("All Mail", "new", "New bill");
     await showImap("Folders/Shops");
+    // Opening All Mail checks for changes at most every 30 seconds; the setup opened it last.
+    await sleep(31000);
+    const statuses = t.statuses;
     await showImap("All Mail");
-    await until(() => ihdr("All Mail", "new") && icell("new") == "Finanzen", "new message resolves", 45000);
+    await until(() => ihdr("All Mail", "new") && icell("new") == "Finanzen", "new message resolves", 20000);
+    if (t.statuses == statuses) throw new Error("no STATUS check ran");
+    `
+  );
+
+  await check(
+    "IMAP: a displayed All Mail does not keep checking for changes",
+    client,
+    `
+    const t = window.allMailPlusTest;
+    await showImap("All Mail");
+    await sleep(3000);
+    const before = t.statuses;
+    await sleep(15000);
+    // One check sends a STATUS per folder; the periodic one may fall into this window.
+    const perCheck = imapRoot().descendants.length + 1;
+    if (t.statuses - before > perCheck) throw new Error((t.statuses - before) + " STATUS commands in 15 seconds");
     `
   );
 

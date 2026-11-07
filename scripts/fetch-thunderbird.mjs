@@ -65,6 +65,7 @@ const FAKESERVER_FILES = {
   "Auth.sys.mjs": "5fa27bff487818fc89faddb826d97fd2efc1ff82f4e0b58537029a67935ea410",
 };
 export const FAKESERVER_DIR = path.join(root, ".cache", "fakeserver");
+export const FAKESERVER_NAMES = Object.keys(FAKESERVER_FILES);
 
 export async function fetchFakeServer() {
   const dir = path.join(FAKESERVER_DIR, "mailnews");
@@ -75,7 +76,7 @@ export async function fetchFakeServer() {
       continue;
     }
     const url = `https://hg-edge.mozilla.org/releases/comm-esr153/raw-file/${FAKESERVER_REVISION}/mailnews/test/fakeserver/${name}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(60000) });
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status} ${url}`);
     }

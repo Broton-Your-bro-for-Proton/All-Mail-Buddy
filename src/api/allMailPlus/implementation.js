@@ -148,7 +148,11 @@ const controller = {
     emitter.emit("notice", text);
   },
 
-  /** Runs fn once calls stop for ms, but no later than maxWait after the first call. */
+  /**
+   * Runs fn once calls stop for ms. With maxWait, calls after maxWait no longer
+   * postpone it, so it runs at most maxWait + ms after the first call; the
+   * pending fn is kept, so callers with maxWait must not capture changing state.
+   */
   debounce(name, ms, fn, maxWait = Infinity) {
     const first = this.timerStarts.get(name) ?? Date.now();
     if (this.timers.has(name) && Date.now() - first >= maxWait) {
@@ -333,7 +337,8 @@ const controller = {
       2000,
       () => {
         const current = this.accounts.get(account.key);
-        if (current) {
+        // Rebuild and sync count again when they finish.
+        if (current?.state == "ready") {
           this.updateCoverage(current);
         }
       },
@@ -503,6 +508,8 @@ const controller = {
     try {
       await this.syncChangedFolders(account);
     } finally {
+      // A slow check loads All Mail late; that load must not start another one.
+      account.checkedAt = Date.now();
       account.checking = false;
     }
   },
@@ -651,6 +658,9 @@ const controller = {
     } finally {
       if (report.failed) {
         errors.unshift(`${report.failed} searches failed or timed out`);
+      }
+      if (!alive()) {
+        errors.unshift("interrupted by a folder change or by stopping the add-on");
       }
       report.error = errors.join("; ");
       report.running = false;

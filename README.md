@@ -122,7 +122,7 @@ npm run build               # package dist/*.xpi
 SHA-512 sums and unpacks it into `.cache/thunderbird/` without installing it.
 It also downloads Thunderbird's fake IMAP server from its test suite
 (`Imapd.sys.mjs`, `Maild.sys.mjs`, `Auth.sys.mjs`, about 100 KB) from
-hg.mozilla.org, pinned to a comm-esr153 revision and checked by SHA-256, into
+hg-edge.mozilla.org, pinned to a comm-esr153 revision and checked by SHA-256, into
 `.cache/fakeserver/`.
 `test:e2e` runs that copy with a throwaway profile, so it never starts or reads
 a Thunderbird that is installed on the machine. Another binary can be passed as
