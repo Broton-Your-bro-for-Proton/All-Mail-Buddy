@@ -120,6 +120,10 @@ npm run build               # package dist/*.xpi
 `setup:thunderbird` downloads the official en-US Windows build of Thunderbird
 153.6.0esr from archive.mozilla.org (about 80 MB), checks it against Mozilla's
 SHA-512 sums and unpacks it into `.cache/thunderbird/` without installing it.
+It also downloads Thunderbird's fake IMAP server from its test suite
+(`Imapd.sys.mjs`, `Maild.sys.mjs`, `Auth.sys.mjs`, about 100 KB) from
+hg-edge.mozilla.org, pinned to a comm-esr153 revision and checked by SHA-256, into
+`.cache/fakeserver/`.
 `test:e2e` runs that copy with a throwaway profile, so it never starts or reads
 a Thunderbird that is installed on the machine. Another binary can be passed as
 the first argument or via `TB_BINARY`. `E2E_SCREENSHOTS=<dir>` stores
@@ -127,7 +131,10 @@ screenshots of the cards view, the table view and the settings page.
 
 ## Manual check with a real Bridge account
 
-The end-to-end test simulates the Bridge layout on Local Folders. Before relying
+The end-to-end test simulates the Bridge layout on Local Folders, and over
+real IMAP with the fake server: the Folder column, the STATUS based sync, the
+server check repairing a folder whose UID was reused for another message, and
+the list of unsubscribed server folders. The fake server is not Bridge, though. Before relying
 on the add-on with real mail, check once with Bridge running:
 
 1. Open All Mail and confirm the badge or Folder column matches the folder
