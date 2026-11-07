@@ -1,6 +1,6 @@
 {
   "name": "thunderbird-allmail-plus",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Thunderbird add-on for Proton Mail Bridge's All Mail folder",
   "scripts": {

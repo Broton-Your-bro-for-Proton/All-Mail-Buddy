@@ -41,6 +41,35 @@
     </section>
 
     <section class="panel">
+      <h2>Diagnosis</h2>
+      <p class="muted">All Mail messages that do not have exactly one matching copy in a real folder.</p>
+      <div id="diagnosis"></div>
+      <div class="actions">
+        <button id="showProblems" class="btn btn-default" type="button">Show all affected messages</button>
+        <label class="row" id="problemFilterRow" hidden>
+          <span>Problem</span>
+          <select id="problemFilter"><option value="">All</option></select>
+        </label>
+      </div>
+      <p id="problemCount" class="muted" hidden></p>
+      <div id="problems" class="table-wrap"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Server check</h2>
+      <p class="muted">
+        Looks up messages without a folder on the server. Folders whose local message list no longer matches
+        the server are repaired like "Repair Folder" in Thunderbird does it; all other folders stay untouched.
+      </p>
+      <div id="serverCheck" class="table-wrap"></div>
+      <div class="actions">
+        <button id="checkServer" class="btn btn-primary" type="button">Check server now</button>
+        <button id="listFolders" class="btn btn-default" type="button">List server folders missing in Thunderbird</button>
+      </div>
+      <div id="serverFolders" class="table-wrap"></div>
+    </section>
+
+    <section class="panel">
       <h2>Settings</h2>
       <label class="row">
         <input id="syncOnStartup" type="checkbox">
@@ -49,6 +78,10 @@
       <label class="row">
         <span>Sync interval in minutes (0 turns it off)</span>
         <input id="syncIntervalMinutes" type="number" min="0" max="1440" step="1">
+      </label>
+      <label class="row">
+        <input id="dailyServerCheck" type="checkbox">
+        <span>Check the server once a day when messages have no folder</span>
       </label>
     </section>
 

@@ -254,6 +254,45 @@ async function check(name, client, body, ...args) {
   }
 }
 
+/**
+ * Like check, but runs body inside the page of the current tab. Extension
+ * pages live in another process, so the body goes there as a frame script.
+ */
+async function checkPage(name, client, body) {
+  const page = `async () => {
+    const sleep = ms => new Promise(r => content.setTimeout(r, ms));
+    async function until(check, what, ms = 15000) {
+      const end = Date.now() + ms;
+      while (Date.now() < end) {
+        try { if (await check()) return; } catch {}
+        await sleep(100);
+      }
+      throw new Error("Timed out: " + what);
+    }
+    const doc = content.document;
+    ${body}
+  }`;
+  await check(
+    name,
+    client,
+    `
+    const browser = window.document.getElementById("tabmail").currentTabInfo.browser;
+    const result = new Promise(resolve => {
+      const listener = message => {
+        browser.messageManager.removeMessageListener("allmailplus-test", listener);
+        resolve(message.data);
+      };
+      browser.messageManager.addMessageListener("allmailplus-test", listener);
+    });
+    const script = "(" + args[0] + ")().then(() => sendAsyncMessage('allmailplus-test', ''), e => sendAsyncMessage('allmailplus-test', String(e)))";
+    browser.messageManager.loadFrameScript("data:," + encodeURIComponent(script), false);
+    const error = await Promise.race([result, sleep(60000).then(() => "frame script did not report back")]);
+    if (error) throw new Error(error);
+    `,
+    page
+  );
+}
+
 async function screenshot(client, name) {
   if (!shots) {
     return;
@@ -596,6 +635,29 @@ try {
     if (errors.length) throw new Error(errors.join("; "));
     `,
     addon
+  );
+
+  await checkPage(
+    "settings page shows the diagnosis and every affected message as tables",
+    client,
+    `
+    await until(() => doc.querySelector("#diagnosis table"), "diagnosis table");
+    const diagnosis = doc.getElementById("diagnosis").textContent;
+    if (!diagnosis.includes("Ambiguous") || !diagnosis.includes("Size differs")) throw new Error("diagnosis: " + diagnosis);
+    doc.getElementById("showProblems").click();
+    await until(() => doc.querySelectorAll("#problems tbody tr").length >= 2, "problem rows");
+    const rows = [...doc.querySelectorAll("#problems tbody tr")].map(r => r.textContent);
+    if (!rows.some(r => r.includes("Sent to myself") && r.includes("Ambiguous"))) throw new Error("rows: " + rows.join(" | "));
+    if (!rows.some(r => r.includes("Size differs") && r.includes("Copy differs") && r.includes("Inbox"))) throw new Error("rows: " + rows.join(" | "));
+    doc.getElementById("problemFilter").value = "ambiguous";
+    doc.getElementById("problemFilter").dispatchEvent(new Event("change"));
+    const filtered = [...doc.querySelectorAll("#problems tbody tr")].map(r => r.textContent);
+    if (!filtered.length || filtered.length >= rows.length || !filtered.every(r => r.includes("Ambiguous"))) {
+      throw new Error("filter: " + filtered.join(" | "));
+    }
+    doc.getElementById("listFolders").click();
+    await until(() => doc.getElementById("serverFolders").textContent.includes("every folder"), "server folder list");
+    `
   );
   await screenshot(client, "options");
 

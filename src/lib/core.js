@@ -189,7 +189,48 @@ var AllMailCore = (() => {
     return previous ? previous != `${total}/${nextUid}` : total != localCount;
   }
 
-  return { isBridgeRoot, classify, LocationIndex, staleUris, sameSize, needsSync };
+  /**
+   * What an online search hit says about a folder. Thunderbird only reports
+   * hits for UIDs it knows locally, with its local header. A header that is
+   * none of the searched messages means the local list maps that UID to
+   * another message, so the folder needs a repair ("broken"). A searched
+   * message means the folder has it and only the index is behind ("stale").
+   *
+   * @param {Set<string>} searched - Message-IDs of the search
+   * @param {string} hitId - Message-ID of the local header that was hit
+   */
+  function hitVerdict(searched, hitId) {
+    if (searched.has(hitId)) {
+      return "stale";
+    }
+    // IMAP HEADER search matches substrings, so a longer ID may contain a searched one.
+    return [...searched].some(id => hitId.includes(id)) ? "" : "broken";
+  }
+
+  /** Server folder paths that Thunderbird does not have. */
+  function missingFolders(serverPaths, localPaths) {
+    const known = new Set(localPaths);
+    return serverPaths.filter(path => !known.has(path)).sort();
+  }
+
+  const DAY = 24 * 60 * 60 * 1000;
+
+  /** Whether the daily server check should run now. */
+  function serverCheckDue({ enabled, nofolder, last, now }) {
+    return !!enabled && nofolder > 0 && now - last >= DAY;
+  }
+
+  return {
+    isBridgeRoot,
+    classify,
+    LocationIndex,
+    staleUris,
+    sameSize,
+    needsSync,
+    hitVerdict,
+    missingFolders,
+    serverCheckDue,
+  };
 })();
 
 if (typeof module == "object") {

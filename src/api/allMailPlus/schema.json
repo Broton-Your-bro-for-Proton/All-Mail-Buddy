@@ -16,7 +16,10 @@
       },
       { "name": "getStatus", "type": "function", "async": true, "parameters": [] },
       { "name": "rebuild", "type": "function", "async": true, "parameters": [] },
-      { "name": "syncNow", "type": "function", "async": true, "parameters": [] }
+      { "name": "syncNow", "type": "function", "async": true, "parameters": [] },
+      { "name": "checkServer", "type": "function", "async": true, "parameters": [] },
+      { "name": "listServerFolders", "type": "function", "async": true, "parameters": [] },
+      { "name": "listProblems", "type": "function", "async": true, "parameters": [] }
     ],
     "events": [
       {

@@ -83,9 +83,22 @@ td {
   white-space: nowrap;
 }
 
-tr.details td {
+#diagnosis td,
+#problems td {
   white-space: normal;
-  padding-top: 0;
+}
+
+#diagnosis table + h3,
+#diagnosis table + table,
+#serverCheck table,
+#serverFolders table {
+  margin-top: 12px;
+}
+
+h3 {
+  margin: 16px 0 6px;
+  color: var(--aio-muted);
+  font: 600 13px/1.4 "Segoe UI", system-ui, sans-serif;
 }
 
 th {
@@ -117,6 +130,7 @@ tbody tr:hover {
 
 .actions {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
@@ -170,6 +184,7 @@ input[type="checkbox"] {
   accent-color: var(--aio-accent);
 }
 
+select,
 input[type="number"] {
   width: 80px;
   min-height: 32px;
@@ -178,4 +193,12 @@ input[type="number"] {
   border-radius: 5px;
   background: var(--aio-bg);
   color: var(--aio-text);
+}
+
+select {
+  width: auto;
+}
+
+[hidden] {
+  display: none !important;
 }
