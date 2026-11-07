@@ -306,6 +306,7 @@ try {
       throw new Error(e.message + ", got " + JSON.stringify(value));
     });
     const expect = (a, b) => { if (a !== b) throw new Error(JSON.stringify(a) + " != " + JSON.stringify(b)); };
+    expect(ThreadPaneColumns.getColumn("allMailPlusLocation").name, "Folder");
     expect(cell("allMailPlusLabels", "All Mail", "invoice"), "Wichtig");
     expect(cell("allMailPlusLocation", "All Mail", "hello"), "Inbox");
     expect(cell("allMailPlusLocation", "All Mail", "twin"), "Inbox, Sent");

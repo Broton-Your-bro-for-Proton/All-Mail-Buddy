@@ -3,7 +3,8 @@
 Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
 
 * shows the real folder of every message (cards view: a badge on the card,
-  table view: the columns **Location** and **Labels**),
+  table view: the columns **Folder** and **Labels**, in German **Ordner** and
+  **Labels**),
 * makes Delete, Shift+Delete, Move, Copy, Archive, Junk, Not junk, Move again,
   drag and drop onto a folder and the row buttons act on the message in its
   real folder instead of the All Mail view of it.
@@ -32,6 +33,13 @@ Message-ID, size and date. The add-on keeps an in-memory index of all real and
 label folders and updates it on every add, delete, move and folder sync. A
 message is only acted on when exactly one real copy matches. Otherwise nothing
 is changed and a notification explains why.
+
+Proton keeps every message in exactly one folder. When Thunderbird's local
+copies disagree (two folders hold the message, or the only copy differs in size
+or date), one of those folders has not been synced since the message moved.
+The add-on then syncs exactly those folders again and re-checks, at most once
+every 10 minutes per folder, or after 30 seconds when you try an action on such
+a message. The status page lists why the remaining messages have no match.
 
 ## Junk
 
@@ -62,7 +70,7 @@ screenshots of the cards view, the table view and the settings page.
 The end-to-end test simulates the Bridge layout on Local Folders. Before relying
 on the add-on with real mail, check once with Bridge running:
 
-1. Open All Mail and confirm the badge or Location column matches the folder
+1. Open All Mail and confirm the badge or Folder column matches the folder
    shown in Proton's web app for a few messages.
 2. Move one test message from All Mail to another folder, then press Ctrl+Z.
 3. Delete one test message from All Mail and confirm it lands in Trash.

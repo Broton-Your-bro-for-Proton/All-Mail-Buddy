@@ -88,6 +88,15 @@ test("explains why a message has no match", () => {
   );
 });
 
+test("names folders that may be out of date", () => {
+  const index = sampleIndex();
+  const { staleUris } = require("../src/lib/core.js");
+  assert.deepEqual(staleUris(index.resolve({ id: "b@x", size: 200, date: 6 })), []);
+  assert.deepEqual(staleUris(index.resolve({ id: "twin@x", size: 400, date: 8 })).sort(), ["inbox2", "sent"]);
+  assert.deepEqual(staleUris(index.resolve({ id: "a@x", size: 99, date: 5 })), ["inbox"]);
+  assert.deepEqual(staleUris(index.resolve({ id: "nope@x", size: 1, date: 1 })), []);
+});
+
 test("reports missing messages", () => {
   const result = sampleIndex().resolve({ id: "nope@x", size: 1, date: 1 });
   assert.equal(result.status, "missing");

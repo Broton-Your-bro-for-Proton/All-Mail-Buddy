@@ -49,6 +49,7 @@ const controller = {
   scanning: new Set(), // folder uris whose snapshot is being taken
   dirty: new Set(), // folder uris that changed during their snapshot
   pendingSync: false,
+  refreshedAt: new Map(), // folder uri -> time of the last targeted sync
   syncTimer: null,
   lastNotice: "",
 
@@ -102,6 +103,7 @@ const controller = {
     this.timers.clear();
     this.scanning.clear();
     this.dirty.clear();
+    this.refreshedAt.clear();
     clearTimeout(this.syncTimer);
     resourceHandler().setSubstitution(RESOURCE_HOST, null);
     ThreadPaneColumns.removeCustomColumn(LOCATION_COLUMN);
@@ -310,6 +312,7 @@ const controller = {
   async updateCoverage(account) {
     const coverage = { unique: 0, ambiguous: 0, missing: 0, reasons: {}, sizeDeltas: {}, dateDeltas: {} };
     const count = (map, key) => (map[key] = (map[key] ?? 0) + 1);
+    const stale = new Set();
     try {
       const db = account.allMail.msgDatabase;
       const keys = db.listAllKeys();
@@ -320,6 +323,7 @@ const controller = {
         const entry = this.entryOf(db.getMsgHdrForKey(keys[i]));
         const result = account.index.resolve(entry);
         coverage[result.status]++;
+        core.staleUris(result).forEach(uri => stale.add(uri));
         if (result.reason) {
           count(coverage.reasons, result.reason);
           const [closest] = result.candidates;
@@ -333,6 +337,31 @@ const controller = {
       }
     } catch {}
     account.coverage = coverage;
+    this.refreshFolders(account, stale, 10 * 60000).catch(console.error);
+  },
+
+  /**
+   * Syncs folders that look out of date and rescans them. Each folder is synced
+   * at most once per minAge, which also stops coverage and refresh from looping.
+   */
+  async refreshFolders(account, uris, minAge) {
+    if (account.server.type != "imap") {
+      return;
+    }
+    const now = Date.now();
+    const due = [...uris].filter(uri => now - (this.refreshedAt.get(uri) ?? 0) > minAge).slice(0, 25);
+    for (const uri of due) {
+      this.refreshedAt.set(uri, now);
+      const folder = MailServices.folderLookup.getFolderForURL(uri);
+      if (folder && account.index.hasFolder(uri)) {
+        await this.updateFolder(folder);
+        await this.scanFolder(account, folder);
+      }
+    }
+    if (due.length) {
+      this.coverageLater(account);
+      this.refreshColumns();
+    }
   },
 
   // ---- syncing -------------------------------------------------------------
@@ -365,6 +394,7 @@ const controller = {
           }
           if (folder != account.allMail) {
             await this.scanFolder(account, folder);
+            this.refreshedAt.set(folder.URI, Date.now());
           }
         }
         account.lastSync = Date.now();
@@ -506,14 +536,15 @@ const controller = {
   },
 
   registerColumns() {
+    const names = this.config.columnNames ?? {};
     ThreadPaneColumns.addCustomColumn(LOCATION_COLUMN, {
-      name: "Location",
+      name: names.folder || "Folder",
       hidden: true,
       sortable: true,
       textCallback: hdr => this.locationText(hdr),
     });
     ThreadPaneColumns.addCustomColumn(LABELS_COLUMN, {
-      name: "Labels",
+      name: names.labels || "Labels",
       hidden: true,
       sortable: true,
       textCallback: hdr => this.labelsText(hdr),
@@ -761,9 +792,12 @@ const controller = {
     for (const hdr of hdrs) {
       let real = hdr;
       if (this.isAllMail(hdr.folder)) {
-        real = this.verifiedMatch(this.accountFor(hdr.folder), hdr);
+        const account = this.accountFor(hdr.folder);
+        real = this.verifiedMatch(account, hdr);
         if (!real) {
           failed++;
+          const stale = core.staleUris(account.index.resolve(this.entryOf(hdr)));
+          this.refreshFolders(account, stale, 30000).catch(console.error);
           continue;
         }
       }
@@ -802,7 +836,8 @@ const controller = {
     if (failed) {
       this.notice(
         `${failed} of ${hdrs.length} selected messages could not be matched to exactly one real folder. ` +
-          "Nothing was changed. Wait until indexing is done or use the real folder."
+          "Nothing was changed. The folders involved are being synced again, so try again in a few seconds, " +
+          "or use the real folder."
       );
       return;
     }

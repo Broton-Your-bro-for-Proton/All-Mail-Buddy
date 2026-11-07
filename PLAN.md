@@ -9,7 +9,7 @@ instead of the All Mail view of it.
 
 | Feature | Verdict | Hook point in TB 153 |
 | --- | --- | --- |
-| "Location" column | Feasible | `ThreadPaneColumns.addCustomColumn()` (synchronous `textCallback(msgHdr)`) |
+| "Folder" column ("Ordner" in German) | Feasible | `ThreadPaneColumns.addCustomColumn()` (synchronous `textCallback(msgHdr)`) |
 | "Labels" column | Feasible | same API, labels come from `Labels/*` and `Starred` |
 | Location in cards view (TB 153 default) | Feasible | patch `thread-card.fillRow()` per `about:3pane` window and add a badge |
 | Fast lookup | Feasible | in-memory index built from the folder databases (`nsIMsgDatabase.listAllKeys`) |

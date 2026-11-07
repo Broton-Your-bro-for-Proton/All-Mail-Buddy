@@ -159,7 +159,18 @@ var AllMailCore = (() => {
     }
   }
 
-  return { isBridgeRoot, classify, LocationIndex };
+  /**
+   * Folders whose local copy may be out of date for a resolve result. Proton
+   * keeps a message in exactly one folder, so several matching copies, or a
+   * copy with another size or date, point to a folder Thunderbird has not
+   * synced since the message changed.
+   */
+  function staleUris(result) {
+    const refs = result.status == "ambiguous" ? result.matches : result.candidates;
+    return result.status == "unique" ? [] : [...new Set(refs.map(r => r.uri))];
+  }
+
+  return { isBridgeRoot, classify, LocationIndex, staleUris };
 })();
 
 if (typeof module == "object") {

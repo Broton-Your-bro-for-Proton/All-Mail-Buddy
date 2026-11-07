@@ -2,7 +2,12 @@
 
 const DEFAULTS = { syncOnStartup: true, syncIntervalMinutes: 15, disabledAccounts: [] };
 
-const loadConfig = () => browser.storage.local.get(DEFAULTS);
+const columnNames = {
+  folder: browser.i18n.getMessage("columnFolder"),
+  labels: browser.i18n.getMessage("columnLabels"),
+};
+
+const loadConfig = async () => ({ ...(await browser.storage.local.get(DEFAULTS)), columnNames });
 
 browser.allMailPlus.onNotice.addListener(message =>
   browser.notifications.create({ type: "basic", title: "All Mail+", message, iconUrl: "icons/icon.svg" })
