@@ -5,6 +5,7 @@ const DEFAULTS = { syncOnStartup: true, syncIntervalMinutes: 15, disabledAccount
 const columnNames = {
   folder: browser.i18n.getMessage("columnFolder"),
   labels: browser.i18n.getMessage("columnLabels"),
+  noFolder: browser.i18n.getMessage("noFolder"),
 };
 
 const loadConfig = async () => ({ ...(await browser.storage.local.get(DEFAULTS)), columnNames });

@@ -320,10 +320,11 @@ const controller = {
       unique: 0,
       ambiguous: 0,
       missing: 0,
+      nofolder: 0, // Proton keeps these only in All Mail
       reasons: {},
       sizeDeltas: {},
       dateDeltas: {},
-      examples: [], // a few messages without any real copy, to look them up in Proton
+      examples: [], // a few messages without any real folder, to look them up in Proton
     };
     const count = (map, key) => (map[key] = (map[key] ?? 0) + 1);
     const stale = new Set();
@@ -339,11 +340,11 @@ const controller = {
         const result = account.index.resolve(entry);
         coverage[result.status]++;
         core.staleUris(result).forEach(uri => stale.add(uri));
-        if (result.reason) {
+        if (result.status == "nofolder" && coverage.examples.length < 5) {
+          coverage.examples.push({ subject: hdr.mime2DecodedSubject, date: hdr.date / 1000 });
+        }
+        if (result.status == "missing") {
           count(coverage.reasons, result.reason);
-          if (result.reason == "no-copy" && coverage.examples.length < 5) {
-            coverage.examples.push({ subject: hdr.mime2DecodedSubject, date: hdr.date / 1000 });
-          }
           const [closest] = result.candidates;
           if (closest && closest.size != entry.size) {
             count(coverage.sizeDeltas, closest.size - entry.size);
@@ -612,10 +613,13 @@ const controller = {
       return "";
     }
     const result = account.index.resolve(this.entryOf(hdr));
-    if (result.status == "missing") {
-      return account.state == "ready" ? "?" : "…";
+    if (account.state != "ready" && !result.location) {
+      return "…";
     }
-    return result.location;
+    if (result.status == "nofolder") {
+      return this.config.columnNames?.noFolder || "No folder";
+    }
+    return result.status == "missing" ? "?" : result.location;
   },
 
   labelsText(hdr) {
@@ -872,15 +876,22 @@ const controller = {
    * Map every header to the header in its real folder. All Mail headers are
    * resolved through the index, every other header stays as it is.
    *
-   * @returns {{groups: Map<nsIMsgFolder, nsIMsgDBHdr[]>, failed: number}}
+   * All Mail headers without any real folder come back as orphans.
+   *
+   * @returns {{groups: Map<nsIMsgFolder, nsIMsgDBHdr[]>, orphans: nsIMsgDBHdr[], failed: number}}
    */
   resolveReal(hdrs) {
     const groups = new Map();
+    const orphans = [];
     let failed = 0;
     for (const hdr of hdrs) {
       let real = hdr;
       if (this.isAllMail(hdr.folder)) {
         const account = this.accountFor(hdr.folder);
+        if (this.isOrphan(account, hdr)) {
+          orphans.push(hdr);
+          continue;
+        }
         real = this.verifiedMatch(account, hdr);
         if (!real) {
           failed++;
@@ -893,7 +904,48 @@ const controller = {
       list.push(real);
       groups.set(real.folder, list);
     }
-    return { groups, failed };
+    return { groups, orphans, failed };
+  },
+
+  isOrphan(account, hdr) {
+    // Only trust "no folder" when every folder was read; otherwise the real copy
+    // may sit in a folder the index does not know yet.
+    return (
+      account.state == "ready" &&
+      !account.unreadable.size &&
+      !(hdr.flags & Ci.nsMsgMessageFlags.IMAPDeleted) &&
+      account.index.resolve(this.entryOf(hdr)).status == "nofolder"
+    );
+  },
+
+  /**
+   * Folder an orphan goes to for a command: false when the command files
+   * nothing, null when the folder it needs does not exist. Bridge refuses to
+   * move out of All Mail, but copying a message into a folder files the one
+   * Proton message there, which is a move for a message that has no folder.
+   */
+  orphanTarget(allMail, command, destFolder) {
+    const root = allMail.rootFolder;
+    switch (command) {
+      case "cmd_deleteMessage":
+      case "cmd_shiftDeleteMessage":
+        return root.getFolderWithFlags(Flags.Trash);
+      case "cmd_moveMessage":
+      case "cmd_copyMessage":
+        return destFolder;
+      case "cmd_archive":
+        return root.getFolderWithFlags(Flags.Archive);
+      case "cmd_markAsJunk": {
+        const settings = allMail.server.spamSettings;
+        if (!settings?.manualMark) {
+          return false;
+        }
+        return settings.manualMarkMode == Ci.nsISpamSettings.MANUAL_MARK_MODE_DELETE
+          ? root.getFolderWithFlags(Flags.Trash)
+          : (this.junkFolder(allMail) ?? null);
+      }
+    }
+    return false;
   },
 
   verifiedMatch(account, hdr) {
@@ -920,7 +972,7 @@ const controller = {
   },
 
   perform(win, command, hdrs, destFolder, { confirm = true } = {}) {
-    const { groups, failed } = this.resolveReal(hdrs);
+    const { groups, orphans, failed } = this.resolveReal(hdrs);
     if (failed) {
       this.notice(
         `${failed} of ${hdrs.length} selected messages could not be matched to exactly one real folder. ` +
@@ -928,6 +980,17 @@ const controller = {
           "or use the real folder."
       );
       return;
+    }
+    const orphanCopies = [];
+    for (const [allMail, list] of this.byFolder(orphans)) {
+      const target = this.orphanTarget(allMail, command, destFolder);
+      if (target === null) {
+        this.notice(`${list.length} selected messages have no folder and the folder to file them in is missing. Nothing was changed.`);
+        return;
+      }
+      if (target && target != allMail) {
+        orphanCopies.push([allMail, list, target]);
+      }
     }
     const msgWindow = win.top.msgWindow;
     const allMailHdrs = hdrs.filter(hdr => this.isAllMail(hdr.folder));
@@ -940,7 +1003,8 @@ const controller = {
     switch (command) {
       case "cmd_deleteMessage":
       case "cmd_shiftDeleteMessage": {
-        const permanent = command == "cmd_shiftDeleteMessage";
+        // Proton only deletes for good from Trash, so orphans always go there.
+        const permanent = command == "cmd_shiftDeleteMessage" && groups.size > 0;
         // Pass a Trash folder when any copy lives there, so its warning shows.
         const folders = [...groups.keys()];
         const folder =
@@ -972,19 +1036,27 @@ const controller = {
         break;
       }
       case "cmd_archive": {
-        const archiver = new MessageArchiver();
-        archiver.msgWindow = msgWindow;
-        archiver.oncomplete = done;
-        archiver.archiveMessages(realHdrs);
+        if (realHdrs.length) {
+          const archiver = new MessageArchiver();
+          archiver.msgWindow = msgWindow;
+          archiver.oncomplete = done;
+          archiver.archiveMessages(realHdrs);
+        }
         break;
       }
       case "cmd_markAsJunk":
-        moved = this.markJunk(groups, allMailHdrs, msgWindow, listener);
+        moved = this.markJunk(groups, allMailHdrs, msgWindow, listener) || orphanCopies.length > 0;
         break;
       case "cmd_markAsNotJunk":
         moved = false;
         this.markNotJunk(groups, allMailHdrs, msgWindow, listener);
         break;
+    }
+    for (const [allMail, list, target] of orphanCopies) {
+      // No undo: undoing an IMAP copy expunges it, which Proton treats as a
+      // permanent delete when the copy went to Trash or Spam.
+      MailServices.copy.copyMessages(allMail, list, target, false, listener, msgWindow, false);
+      touched.add(target);
     }
     // Native code may have prepared a selection jump for a row removal that
     // does not happen now (cmd_moveToFolderAgain does this).
@@ -1085,9 +1157,11 @@ const controller = {
     for (const folder of folders) {
       this.rescanLater(folder);
     }
-    for (const allMail of this.byFolder(allMailHdrs).keys()) {
-      if (allMail.server.type == "imap") {
-        this.debounce(`update:${allMail.URI}`, 1500, () => this.updateFolder(allMail));
+    // IMAP copies report no new headers, so fetch them to update the columns
+    // soon. Loading a folder rescans it.
+    for (const folder of [...folders, ...this.byFolder(allMailHdrs).keys()]) {
+      if (folder.server.type == "imap") {
+        this.debounce(`update:${folder.URI}`, 1500, () => this.updateFolder(folder));
       }
     }
     this.refreshColumns();
