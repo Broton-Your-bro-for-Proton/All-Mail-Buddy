@@ -51,6 +51,23 @@ Copies of the same message may differ by up to 2 bytes in Thunderbird's stored
 size, which is tolerated. The status page lists why the remaining messages have
 no match and shows a few examples to look up in Proton.
 
+## Messages without a folder
+
+Proton can hold a message in All Mail only, with no folder at all. This happens
+for example when an IMAP client moves a message to a local folder: the client
+copies it out and deletes it from its Proton folder, but Proton only deletes
+for good from Trash and Spam. The Folder column shows such messages as
+"No folder".
+
+Bridge refuses to move a message out of All Mail. Copying it into a folder,
+however, files the one Proton message there instead of creating a second one.
+For messages without a folder the add-on therefore copies from All Mail:
+delete copies to Trash (also with Shift+Delete, since Proton only deletes for
+good from Trash), move and drag copy to the target, archive copies to the
+account's Archive folder, and junk copies to Spam or Trash depending on the
+junk setting. The All Mail entry stays, and the column then shows the new
+folder.
+
 ## Junk
 
 Marking as junk follows Thunderbird's own setting under *Settings > Privacy &
@@ -85,11 +102,13 @@ on the add-on with real mail, check once with Bridge running:
 2. Move one test message from All Mail to another folder, then press Ctrl+Z.
 3. Delete one test message from All Mail and confirm it lands in Trash.
 4. Drag one test message from All Mail onto a folder.
+5. Delete one message shown as "No folder" and confirm in Proton's web app
+   that it is now in Trash, and only once.
 
 ## Limits
 
-* Actions are refused while the index is being built, and when no copy with
-  the same Message-ID, size and date exists. Two distinct messages that agree
+* Actions are refused while the index is being built, and when a real copy
+  with the same Message-ID exists but none matches its size and date. Two distinct messages that agree
   on all three can still be confused if one of their folders was not synced
   yet. "Sync all folders now" on the settings page refreshes all folders.
 * Marking as junk sets the junk score on the real message but does not train

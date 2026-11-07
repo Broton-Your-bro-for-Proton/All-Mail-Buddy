@@ -90,6 +90,8 @@ const M = {
   spam: message("spam", "Cheap offer"),
   twin: message("twin", "Sent to myself"),
   orphan: message("orphan", "Orphan message"),
+  orphanmove: message("orphanmove", "Orphan to move"),
+  orphanarchive: message("orphanarchive", "Orphan to archive"),
   drag: message("drag", "Drag me"),
   copy: message("copy", "Copy me"),
   label: message("label", "Label me"),
@@ -310,7 +312,7 @@ try {
     expect(cell("allMailPlusLabels", "All Mail", "invoice"), "Wichtig");
     expect(cell("allMailPlusLocation", "All Mail", "hello"), "Inbox");
     expect(cell("allMailPlusLocation", "All Mail", "twin"), "Inbox, Sent");
-    expect(cell("allMailPlusLocation", "All Mail", "orphan"), "?");
+    expect(cell("allMailPlusLocation", "All Mail", "orphan"), "No folder");
     expect(cell("allMailPlusLocation", "Folders/Finanzen", "invoice"), "");
     expect(cell("allMailPlusLabels", "Folders/Finanzen", "invoice"), "Wichtig");
     expect(cell("allMailPlusLocation", "Labels/Wichtig", "invoice"), "Finanzen");
@@ -326,7 +328,7 @@ try {
       Services.obs.notifyObservers(o, "allmailplus-status");
       return JSON.parse(o.data).accounts[0];
     };
-    await until(() => status().coverage?.reasons?.["no-copy"] >= 1, "coverage with reasons");
+    await until(() => status().coverage?.nofolder == 3, "coverage counts messages without folder");
     const { coverage } = status();
     if (coverage.reasons.size != 1) throw new Error("size reason: " + JSON.stringify(coverage));
     if (!Object.keys(coverage.sizeDeltas).every(d => Number(d) > 0)) throw new Error("size delta: " + JSON.stringify(coverage));
@@ -492,10 +494,26 @@ try {
     if (!has("Inbox", "twin") || !has("Sent", "twin") || has("Trash", "twin") || !has("All Mail", "twin")) {
       throw new Error("ambiguous message was changed");
     }
-    const orphan = await select("orphan");
-    orphan.commandController.doCommand("cmd_deleteMessage");
-    await sleep(1000);
-    if (!has("All Mail", "orphan") || has("Trash", "orphan")) throw new Error("orphan was changed");
+    `
+  );
+
+  await check(
+    "Messages without a folder are filed by copying them out of All Mail",
+    client,
+    `
+    let win = await select("orphan");
+    win.commandController.doCommand("cmd_deleteMessage");
+    await until(() => has("Trash", "orphan"), "orphan copied to Trash");
+    await until(() => cell("allMailPlusLocation", "All Mail", "orphan") == "Trash", "orphan location");
+    win = await select("orphanmove");
+    win.commandController.doCommand("cmd_moveMessage", folder("Folders/Shops"));
+    await until(() => has("Folders/Shops", "orphanmove"), "orphan copied to Shops");
+    win = await select("orphanarchive");
+    win.commandController.doCommand("cmd_archive");
+    await until(() => has("Archives", "orphanarchive"), "orphan copied to Archives");
+    for (const id of ["orphan", "orphanmove", "orphanarchive"]) {
+      if (!has("All Mail", id)) throw new Error("All Mail entry was removed: " + id);
+    }
     `
   );
 

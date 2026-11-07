@@ -113,17 +113,24 @@ test("decides which folders need a sync after STATUS", () => {
   assert.equal(needsSync({ previous: "5/9", total: 4, nextUid: 9, localCount: 5 }), true);
 });
 
-test("reports missing messages", () => {
-  const result = sampleIndex().resolve({ id: "nope@x", size: 1, date: 1 });
-  assert.equal(result.status, "missing");
+test("reports messages that have no real folder at all", () => {
+  const index = sampleIndex();
+  const result = index.resolve({ id: "nope@x", size: 1, date: 1 });
+  assert.equal(result.status, "nofolder");
   assert.equal(result.location, "");
   assert.deepEqual(result.labels, []);
+  index.setFolder("lbl", { kind: "label", name: "L" }, [{ key: 1, id: "labelonly@x", size: 1, date: 1 }]);
+  const labelOnly = index.resolve({ id: "labelonly@x", size: 1, date: 1 });
+  assert.equal(labelOnly.status, "nofolder");
+  assert.deepEqual(labelOnly.labels, ["L"]);
+  // A real copy that differs is a stale folder, not a missing folder.
+  assert.equal(index.resolve({ id: "a@x", size: 50, date: 5 }).status, "missing");
 });
 
 test("tracks additions, removals, key changes and folder rescans", () => {
   const index = sampleIndex();
   index.removeEntry("fin", 7);
-  assert.equal(index.resolve({ id: "b@x", size: 200, date: 6 }).status, "missing");
+  assert.equal(index.resolve({ id: "b@x", size: 200, date: 6 }).status, "nofolder");
 
   index.addEntry("inbox", { key: 8, id: "b@x", size: 200, date: 6 });
   assert.equal(index.resolve({ id: "b@x", size: 200, date: 6 }).location, "Inbox");
@@ -132,7 +139,7 @@ test("tracks additions, removals, key changes and folder rescans", () => {
   assert.equal(index.resolve({ id: "b@x", size: 200, date: 6 }).matches[0].key, 80);
 
   index.setFolder("inbox", { kind: "real", name: "Inbox" }, []);
-  assert.equal(index.resolve({ id: "a@x", size: 100, date: 5 }).status, "missing");
+  assert.equal(index.resolve({ id: "a@x", size: 100, date: 5 }).status, "nofolder");
   assert.equal(index.byId.has("a@x"), false);
 
   index.removeFolder("work");
@@ -150,7 +157,7 @@ test("re-adding the same key replaces the entry", () => {
   const index = new LocationIndex();
   index.setFolder("f", { kind: "real", name: "F" }, [{ key: 1, id: "a@x", size: 1, date: 1 }]);
   index.addEntry("f", { key: 1, id: "b@x", size: 1, date: 1 });
-  assert.equal(index.resolve({ id: "a@x", size: 1, date: 1 }).status, "missing");
+  assert.equal(index.resolve({ id: "a@x", size: 1, date: 1 }).status, "nofolder");
   assert.equal(index.resolve({ id: "b@x", size: 1, date: 1 }).status, "unique");
   assert.deepEqual(index.stats(), { folders: 1, messages: 1 });
 });

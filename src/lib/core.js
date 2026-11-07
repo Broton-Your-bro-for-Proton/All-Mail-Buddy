@@ -121,10 +121,12 @@ var AllMailCore = (() => {
      * Find the real folder and the labels of a message.
      *
      * @param {{id: string, size: number, date: number}} msg
-     * @returns {{status: "unique"|"ambiguous"|"missing", matches: object[],
+     * @returns {{status: "unique"|"ambiguous"|"missing"|"nofolder", matches: object[],
      *   location: string, labels: string[], reason: string, candidates: object[]}}
-     *   reason (only when missing): "no-copy", "label-only", "size", "date" or
-     *   "size-date"; candidates are the real copies with the same Message-ID.
+     *   "nofolder" means no real folder has the Message-ID at all: Proton keeps
+     *   such a message only in All Mail. reason (missing and nofolder): "no-copy",
+     *   "label-only", "size", "date" or "size-date"; candidates are the real
+     *   copies with the same Message-ID.
      */
     resolve({ id, size, date }) {
       const refs = [...(this.byId.get(id) ?? [])];
@@ -146,7 +148,7 @@ var AllMailCore = (() => {
         }
       }
       return {
-        status: ["missing", "unique"][matches.length] ?? "ambiguous",
+        status: candidates.length ? (["missing", "unique"][matches.length] ?? "ambiguous") : "nofolder",
         matches,
         location: names(matches).join(", "),
         labels: names(narrow(ofKind("label"))).sort(),

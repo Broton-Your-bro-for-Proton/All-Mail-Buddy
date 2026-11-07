@@ -1,4 +1,5 @@
 {
   "columnFolder": { "message": "Folder" },
-  "columnLabels": { "message": "Labels" }
+  "columnLabels": { "message": "Labels" },
+  "noFolder": { "message": "No folder" }
 }

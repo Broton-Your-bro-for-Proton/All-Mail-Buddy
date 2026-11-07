@@ -39,9 +39,12 @@ function diagnosisText(account) {
       lines.push(`Date of the closest copy is off by: ${topDeltas(coverage.dateDeltas, "s")}.`);
     }
   }
-  if (coverage?.examples?.length) {
+  if (coverage?.nofolder) {
     const examples = coverage.examples.map(e => `"${e.subject}" (${new Date(e.date).toLocaleDateString()})`);
-    lines.push(`Examples without any copy, to look up in Proton: ${examples.join(", ")}.`);
+    lines.push(
+      `No folder: ${coverage.nofolder} messages are only in All Mail, for example after a move to a local folder. ` +
+        `Delete, move, archive and junk file them into the target folder. Examples: ${examples.join(", ")}.`
+    );
   }
   if (unreadable?.length) {
     lines.push(`Folders that could not be read: ${unreadable.join(", ")}.`);
@@ -59,6 +62,9 @@ function coverageText(coverage) {
   }
   if (coverage.missing) {
     parts.push(`${coverage.missing} not found`);
+  }
+  if (coverage.nofolder) {
+    parts.push(`${coverage.nofolder} without folder`);
   }
   return parts.join(", ");
 }
