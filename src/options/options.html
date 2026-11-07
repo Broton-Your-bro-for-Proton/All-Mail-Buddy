@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>All Mail+ Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="navbar">
+    <img src="../icons/icon.svg" alt="" width="28" height="28">
+    <span class="brand">All Mail+</span>
+    <span class="subtitle">Proton Mail Bridge helper</span>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Accounts</h2>
+      <p class="muted">Accounts with an "All Mail" folder next to "Folders" or "Labels" are detected automatically.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Active</th>
+              <th>Account</th>
+              <th>State</th>
+              <th class="num">Folders</th>
+              <th class="num">Indexed</th>
+              <th>All Mail matched</th>
+              <th>Last sync</th>
+            </tr>
+          </thead>
+          <tbody id="accounts"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="muted" hidden>No Proton Mail Bridge account found.</p>
+      <div class="actions">
+        <button id="sync" class="btn btn-primary" type="button">Sync all folders now</button>
+        <button id="rebuild" class="btn btn-default" type="button">Rebuild index</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Settings</h2>
+      <label class="row">
+        <input id="syncOnStartup" type="checkbox">
+        <span>Sync all Bridge folders when Thunderbird starts</span>
+      </label>
+      <label class="row">
+        <span>Sync interval in minutes (0 turns it off)</span>
+        <input id="syncIntervalMinutes" type="number" min="0" max="1440" step="1">
+      </label>
+    </section>
+
+    <section class="panel">
+      <h2>Last notice</h2>
+      <p id="notice" class="muted">None.</p>
+    </section>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>
