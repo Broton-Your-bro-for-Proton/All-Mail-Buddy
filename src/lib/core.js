@@ -121,13 +121,9 @@ var AllMailCore = (() => {
      */
     resolve({ id, size, date }) {
       const refs = [...(this.byId.get(id) ?? [])];
-      const narrow = list => {
-        if (list.length < 2) {
-          return list;
-        }
-        const same = list.filter(r => r.size == size && r.date == date);
-        return same.length ? same : list;
-      };
+      // Bridge serves the same literal everywhere, so a real copy always has the
+      // same size and date. A copy that differs is another message.
+      const narrow = list => list.filter(r => r.size == size && r.date == date);
       const ofKind = kind => refs.filter(r => this.folders.get(r.uri).kind == kind);
       const matches = narrow(ofKind("real"));
       const names = list => [...new Set(list.map(r => this.folders.get(r.uri).name))];

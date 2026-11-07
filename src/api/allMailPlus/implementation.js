@@ -12,14 +12,15 @@ const LOCATION_COLUMN = "allMailPlusLocation";
 const LABELS_COLUMN = "allMailPlusLabels";
 const INIT_PROPERTY = "allMailPlusColumnsInit";
 
-const MOVE_COMMANDS = new Set([
+const HANDLED_COMMANDS = new Set([
   "cmd_deleteMessage",
   "cmd_shiftDeleteMessage",
   "cmd_moveMessage",
+  "cmd_copyMessage",
   "cmd_archive",
   "cmd_markAsJunk",
+  "cmd_markAsNotJunk",
 ]);
-const HANDLED_COMMANDS = new Set([...MOVE_COMMANDS, "cmd_copyMessage", "cmd_markAsNotJunk"]);
 // Commands that about:message inside about:3pane hands to its parent window.
 const FORWARDED_COMMANDS = new Set([
   "cmd_deleteMessage",
@@ -45,6 +46,9 @@ const controller = {
   accounts: new Map(), // server key -> account state
   unhooks: new Set(),
   timers: new Map(),
+  scanning: new Set(), // folder uris whose snapshot is being taken
+  dirty: new Set(), // folder uris that changed during their snapshot
+  pendingSync: false,
   syncTimer: null,
   lastNotice: "",
 
@@ -96,6 +100,8 @@ const controller = {
       clearTimeout(timer);
     }
     this.timers.clear();
+    this.scanning.clear();
+    this.dirty.clear();
     clearTimeout(this.syncTimer);
     resourceHandler().setSubstitution(RESOURCE_HOST, null);
     ThreadPaneColumns.removeCustomColumn(LOCATION_COLUMN);
@@ -111,6 +117,11 @@ const controller = {
     }
     this.scheduleSync();
     return this.status();
+  },
+
+  failed(error) {
+    console.error("All Mail+:", error);
+    this.notice(`The action failed: ${error.message}. Some messages may already have been changed.`);
   },
 
   notice(text) {
@@ -168,6 +179,8 @@ const controller = {
 
   async rebuild(sync) {
     const generation = (this.generation = (this.generation ?? 0) + 1);
+    // A newer rebuild supersedes this one, so it has to carry the sync request.
+    this.pendingSync ||= sync;
     const previous = new Map(this.accounts);
     this.accounts.clear();
     for (const { server, root, enabled } of this.detectAccounts()) {
@@ -198,8 +211,11 @@ const controller = {
           }
           await this.scanFolder(account, folder);
         }
+        if (generation != this.generation) {
+          return;
+        }
         account.state = "ready";
-        this.updateCoverage(account);
+        this.coverageLater(account);
       } catch (e) {
         account.state = "error";
         account.error = String(e);
@@ -207,7 +223,8 @@ const controller = {
       }
     }
     this.refreshColumns();
-    if (sync) {
+    if (this.pendingSync) {
+      this.pendingSync = false;
       await this.syncAll();
     }
   },
@@ -234,6 +251,7 @@ const controller = {
       return;
     }
     const keys = db.listAllKeys();
+    this.scanning.add(folder.URI);
     const entries = [];
     for (let i = 0; i < keys.length; i++) {
       if (i % 2000 == 1999) {
@@ -250,6 +268,11 @@ const controller = {
       }
     }
     account.index.setFolder(folder.URI, info, entries);
+    this.scanning.delete(folder.URI);
+    if (this.dirty.delete(folder.URI)) {
+      // Changes arrived while the snapshot was taken and were overwritten.
+      this.rescanLater(folder);
+    }
     if (!wasOpen) {
       try {
         folder.closeDBIfFolderNotOpen(false);
@@ -268,17 +291,25 @@ const controller = {
     }
     this.debounce(`scan:${folder.URI}`, 500, async () => {
       await this.scanFolder(account, folder);
-      this.updateCoverage(account);
+      this.coverageLater(account);
       this.refreshColumns();
     });
   },
 
-  updateCoverage(account) {
+  coverageLater(account) {
+    this.debounce(`coverage:${account.key}`, 2000, () => this.updateCoverage(account));
+  },
+
+  async updateCoverage(account) {
     const coverage = { unique: 0, ambiguous: 0, missing: 0 };
     try {
       const db = account.allMail.msgDatabase;
-      for (const key of db.listAllKeys()) {
-        coverage[account.index.resolve(this.entryOf(db.getMsgHdrForKey(key))).status]++;
+      const keys = db.listAllKeys();
+      for (let i = 0; i < keys.length; i++) {
+        if (i % 2000 == 1999) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        coverage[account.index.resolve(this.entryOf(db.getMsgHdrForKey(keys[i]))).status]++;
       }
     } catch {}
     account.coverage = coverage;
@@ -291,30 +322,39 @@ const controller = {
     const minutes = Number(this.config.syncIntervalMinutes);
     if (this.started && minutes > 0) {
       this.syncTimer = setTimeout(async () => {
-        await this.syncAll();
-        this.scheduleSync();
+        try {
+          await this.syncAll();
+        } finally {
+          this.scheduleSync();
+        }
       }, minutes * 60000);
     }
   },
 
   async syncAll() {
-    for (const account of this.accounts.values()) {
-      if (account.state == "syncing") {
+    for (const account of [...this.accounts.values()]) {
+      if (account.state != "ready") {
         continue;
       }
       account.state = "syncing";
-      const folders = [...this.trackedFolders(account), account.allMail];
-      for (const folder of folders) {
-        if (account.server.type == "imap") {
-          await this.updateFolder(folder);
+      try {
+        const folders = [...this.trackedFolders(account), account.allMail];
+        for (const folder of folders) {
+          if (account.server.type == "imap") {
+            await this.updateFolder(folder);
+          }
+          if (folder != account.allMail) {
+            await this.scanFolder(account, folder);
+          }
         }
-        if (folder != account.allMail) {
-          await this.scanFolder(account, folder);
-        }
+        account.lastSync = Date.now();
+      } catch (e) {
+        account.error = String(e);
+        console.error(e);
+      } finally {
+        account.state = "ready";
+        this.coverageLater(account);
       }
-      account.state = "ready";
-      account.lastSync = Date.now();
-      this.updateCoverage(account);
     }
     this.refreshColumns();
     return this.status();
@@ -383,7 +423,7 @@ const controller = {
         return;
       }
       if (controller.isAllMail(folder)) {
-        controller.updateCoverage(controller.accountFor(folder));
+        controller.coverageLater(controller.accountFor(folder));
         controller.refreshColumns();
       } else {
         controller.rescanLater(folder);
@@ -391,7 +431,16 @@ const controller = {
     },
   },
 
+  markDirty(hdrs) {
+    for (const hdr of hdrs) {
+      if (this.scanning.has(hdr.folder.URI)) {
+        this.dirty.add(hdr.folder.URI);
+      }
+    }
+  },
+
   indexAdd(hdrs) {
+    this.markDirty(hdrs);
     for (const hdr of hdrs) {
       const account = this.accountFor(hdr.folder);
       if (account?.index.hasFolder(hdr.folder.URI)) {
@@ -402,6 +451,7 @@ const controller = {
   },
 
   indexRemove(hdrs) {
+    this.markDirty(hdrs);
     for (const hdr of hdrs) {
       this.accountFor(hdr.folder)?.index.removeEntry(hdr.folder.URI, hdr.messageKey);
     }
@@ -517,8 +567,11 @@ const controller = {
   hookExistingWindows() {
     for (const top of Services.wm.getEnumerator(null)) {
       for (const context of top.browsingContext.getAllBrowsingContextsInSubtree()) {
-        if (context.window) {
-          this.hookWindow(context.window);
+        const win = context.window;
+        if (win?.document.readyState == "complete") {
+          this.hookWindow(win);
+        } else if (win) {
+          win.addEventListener("load", () => this.hookWindow(win), { once: true });
         }
       }
     }
@@ -527,7 +580,12 @@ const controller = {
   hookWindow(win) {
     const href = win.location?.href ?? "";
     const is3Pane = href.startsWith("about:3pane");
-    if ((!is3Pane && !href.startsWith("about:message")) || !win.commandController || win.allMailPlusHooked) {
+    if (
+      !this.started ||
+      (!is3Pane && !href.startsWith("about:message")) ||
+      !win.commandController ||
+      win.allMailPlusHooked
+    ) {
       return;
     }
     win.allMailPlusHooked = true;
@@ -540,8 +598,7 @@ const controller = {
             return undefined;
           }
         } catch (e) {
-          console.error("All Mail+:", e);
-          controller.notice(`The action failed and was not performed: ${e.message}`);
+          controller.failed(e);
           return undefined;
         }
       }
@@ -639,23 +696,34 @@ const controller = {
     try {
       this.perform(win, command, hdrs, target);
     } catch (e) {
-      console.error("All Mail+:", e);
-      this.notice(`The action failed and was not performed: ${e.message}`);
+      this.failed(e);
     }
     return true;
   },
 
   handleRowEvent(win, event) {
-    const hdr = win.gDBView?.getMsgHdrAt(event.detail.index);
+    const view = win.gDBView;
+    const index = event.detail.index;
+    const hdr = view?.getMsgHdrAt(index);
     if (!hdr || !this.isAllMail(hdr.folder)) {
       return;
     }
     event.stopImmediatePropagation();
+    let hdrs = [hdr];
+    if (view.isContainer(index) && !view.isContainerOpen(index)) {
+      // Like native, a collapsed thread stands for all of its messages.
+      const thread = view.getThreadContainingIndex(index);
+      hdrs = Array.from({ length: thread.numChildren }, (_, i) => thread.getChildHdrAt(i));
+    }
     let command = "cmd_deleteMessage";
     if (event.type == "toggle-spam") {
       command = event.detail.isJunk ? "cmd_markAsNotJunk" : "cmd_markAsJunk";
     }
-    this.perform(win, command, [hdr], null, { confirm: false });
+    try {
+      this.perform(win, command, hdrs, null, { confirm: false });
+    } catch (e) {
+      this.failed(e);
+    }
   },
 
   // ---- actions -------------------------------------------------------------
@@ -688,14 +756,19 @@ const controller = {
   verifiedMatch(account, hdr) {
     const entry = this.entryOf(hdr);
     const result = account.index.resolve(entry);
-    if (result.status != "unique") {
+    if (account.state == "indexing" || result.status != "unique") {
       return null;
     }
     const [{ uri, key }] = result.matches;
     const folder = MailServices.folderLookup.getFolderForURL(uri);
     try {
       const real = folder.msgDatabase.getMsgHdrForKey(key);
-      if (real.messageId == entry.id && !(real.flags & Ci.nsMsgMessageFlags.IMAPDeleted)) {
+      if (
+        real.messageId == entry.id &&
+        real.messageSize == entry.size &&
+        real.date == entry.date &&
+        !(real.flags & Ci.nsMsgMessageFlags.IMAPDeleted)
+      ) {
         return real;
       }
     } catch {}
@@ -718,12 +791,16 @@ const controller = {
     const touched = new Set(groups.keys());
     const done = () => this.afterAction(touched, allMailHdrs);
     const listener = this.copyListener(done);
+    let moved = true;
 
     switch (command) {
       case "cmd_deleteMessage":
       case "cmd_shiftDeleteMessage": {
         const permanent = command == "cmd_shiftDeleteMessage";
-        const folder = groups.size == 1 ? [...groups.keys()][0] : win.gFolder;
+        // Pass a Trash folder when any copy lives there, so its warning shows.
+        const folders = [...groups.keys()];
+        const folder =
+          folders.find(f => f.isSpecialFolder(Flags.Trash, true)) ?? (folders.length == 1 ? folders[0] : win.gFolder);
         if (confirm && win.gDBView && !MailUtils.confirmDelete(permanent, win.gDBView, folder)) {
           return;
         }
@@ -739,6 +816,7 @@ const controller = {
         }
         const kind = this.accountFor(destFolder) ? this.describe(destFolder).kind : "real";
         const isMove = command == "cmd_moveMessage" && kind != "label";
+        moved = isMove;
         for (const [folder, list] of groups) {
           if (folder != destFolder) {
             MailServices.copy.copyMessages(folder, list, destFolder, isMove, listener, msgWindow, true);
@@ -752,23 +830,31 @@ const controller = {
       case "cmd_archive": {
         const archiver = new MessageArchiver();
         archiver.msgWindow = msgWindow;
+        archiver.oncomplete = done;
         archiver.archiveMessages(realHdrs);
-        this.debounce("after-archive", 1500, done);
         break;
       }
       case "cmd_markAsJunk":
-        this.markJunk(groups, allMailHdrs, msgWindow, listener);
+        moved = this.markJunk(groups, allMailHdrs, msgWindow, listener);
         break;
       case "cmd_markAsNotJunk":
+        moved = false;
         this.markNotJunk(groups, allMailHdrs, msgWindow, listener);
         break;
     }
-    if (MOVE_COMMANDS.has(command)) {
-      this.selectNext(win, hdrs);
+    // Native code may have prepared a selection jump for a row removal that
+    // does not happen now (cmd_moveToFolderAgain does this).
+    if (win.dbViewWrapperListener) {
+      win.dbViewWrapperListener._nextViewIndexAfterDelete = null;
+    }
+    if (moved) {
+      this.advance(win, hdrs);
     }
   },
 
+  /** @returns {boolean} true when messages were moved or deleted. */
   markJunk(groups, allMailHdrs, msgWindow, listener) {
+    let moved = false;
     const markRead = Services.prefs.getBoolPref("mailnews.ui.junk.manualMarkAsJunkMarksRead", true);
     for (const [folder, list] of groups) {
       if (markRead) {
@@ -781,14 +867,17 @@ const controller = {
       }
       if (settings.manualMarkMode == Ci.nsISpamSettings.MANUAL_MARK_MODE_DELETE) {
         folder.deleteMessages(list, msgWindow, false, false, listener, true);
+        moved = true;
         continue;
       }
       const junk = this.junkFolder(folder);
       if (junk) {
         MailServices.copy.copyMessages(folder, list, junk, true, listener, msgWindow, true);
+        moved = true;
       }
     }
     this.setScoreOnAllMail(allMailHdrs, "100", markRead);
+    return moved;
   },
 
   markNotJunk(groups, allMailHdrs, msgWindow, listener) {
@@ -803,13 +892,20 @@ const controller = {
   },
 
   setScoreOnAllMail(hdrs, score, markRead) {
-    if (hdrs.length) {
-      const folder = hdrs[0].folder;
+    for (const [folder, list] of this.byFolder(hdrs)) {
       if (markRead) {
-        folder.markMessagesRead(hdrs, true);
+        folder.markMessagesRead(list, true);
       }
-      folder.setJunkScoreForMessages(hdrs, score, "user", -1);
+      folder.setJunkScoreForMessages(list, score, "user", -1);
     }
+  },
+
+  byFolder(hdrs) {
+    const groups = new Map();
+    for (const hdr of hdrs) {
+      groups.set(hdr.folder, [...(groups.get(hdr.folder) ?? []), hdr]);
+    }
+    return groups;
   },
 
   isJunkFolder(folder) {
@@ -845,16 +941,33 @@ const controller = {
     for (const folder of folders) {
       this.rescanLater(folder);
     }
-    const allMail = allMailHdrs[0]?.folder;
-    if (allMail && allMail.server.type == "imap") {
-      this.debounce(`update:${allMail.URI}`, 1500, () => this.updateFolder(allMail));
+    for (const allMail of this.byFolder(allMailHdrs).keys()) {
+      if (allMail.server.type == "imap") {
+        this.debounce(`update:${allMail.URI}`, 1500, () => this.updateFolder(allMail));
+      }
     }
     this.refreshColumns();
   },
 
-  selectNext(win, hdrs) {
+  /**
+   * Native code advances when rows disappear. All Mail keeps the rows, so do it
+   * here: next row in the 3-pane, close or next message in a message tab or window.
+   */
+  advance(win, hdrs) {
+    if (win.location.href.startsWith("about:message")) {
+      if (win.parent?.location.href.startsWith("about:3pane")) {
+        return;
+      }
+      if (Services.prefs.getBoolPref("mail.close_message_window.on_delete", false)) {
+        const tabmail = win.top.document.getElementById("tabmail");
+        tabmail ? tabmail.closeTab(win.tabOrWindow) : win.top.close();
+      } else {
+        win.commandController.doCommand("cmd_nextMsg");
+      }
+      return;
+    }
     const view = win.gDBView;
-    if (!view || !win.threadTree || win.location.href.startsWith("about:message")) {
+    if (!view || !win.threadTree) {
       return;
     }
     const rows = hdrs.map(hdr => view.findIndexOfMsgHdr(hdr, false)).filter(i => i >= 0 && i < view.rowCount);

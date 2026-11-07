@@ -66,6 +66,12 @@ on the add-on with real mail, check once with Bridge running:
 
 ## Limits
 
+* Actions are refused while the index is being built, and when no copy with
+  the same Message-ID, size and date exists. Two distinct messages that agree
+  on all three can still be confused if one of their folders was not synced
+  yet. "Sync all folders now" on the settings page refreshes all folders.
+* Marking as junk sets the junk score on the real message but does not train
+  Thunderbird's Bayesian filter the way the native command does.
 * The Search Messages dialog and message filters are not routed.
 * Thunderbird internals change between versions, so the add-on requires
   Thunderbird 153 or later and should be re-tested after major updates.

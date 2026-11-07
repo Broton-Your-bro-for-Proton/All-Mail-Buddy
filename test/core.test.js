@@ -63,9 +63,13 @@ test("reports ambiguity when size and date do not separate the copies", () => {
   assert.equal(result.location, "Sent, Inbox2");
 });
 
-test("keeps all candidates when none has the same size and date", () => {
-  const result = sampleIndex().resolve({ id: "self@x", size: 1, date: 1 });
-  assert.equal(result.status, "ambiguous");
+test("treats copies with another size or date as different messages", () => {
+  const index = sampleIndex();
+  assert.equal(index.resolve({ id: "self@x", size: 1, date: 1 }).status, "missing");
+  // A single candidate is not enough: it must match size and date too.
+  assert.equal(index.resolve({ id: "a@x", size: 101, date: 5 }).status, "missing");
+  assert.equal(index.resolve({ id: "a@x", size: 100, date: 6 }).status, "missing");
+  assert.deepEqual(index.resolve({ id: "b@x", size: 200, date: 7 }).labels, []);
 });
 
 test("reports missing messages", () => {

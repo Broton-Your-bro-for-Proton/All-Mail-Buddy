@@ -33,6 +33,7 @@ const prefs = {
   "mail.warn_on_delete_from_trash": false,
   "mail.warn_on_shift_delete": false,
   "mail.warn_on_collapsed_thread_operation": false,
+  "mail.close_message_window.on_delete": true,
   "mail.accountmanager.accounts": "account1",
   "mail.accountmanager.defaultaccount": "account1",
   "mail.accountmanager.localfoldersserver": "server1",
@@ -88,11 +89,16 @@ const M = {
   restore: message("restore", "Not spam"),
   native: message("native", "Native delete"),
   row: message("row", "Row button delete"),
+  tab: message("tab", "Delete from message tab"),
+  junkstay: message("junkstay", "Junk without move"),
+  sized: message("sized", "Size differs"),
 };
+// Same Message-ID and date, different body: another message, not a copy.
+const sizedOther = M.sized.replace("Body of Size differs.", "A longer body that changes the size.");
 
 const layout = {
   "All Mail": Object.values(M).filter(m => m != M.native),
-  Inbox: [M.hello, M.meeting, M.spam, M.twin, M.drag, M.label, M.native],
+  Inbox: [M.hello, M.meeting, M.spam, M.twin, M.drag, M.label, M.native, M.tab, M.junkstay, sizedOther],
   Sent: [M.twin],
   Spam: [M.restore],
   Trash: [],
@@ -457,6 +463,55 @@ try {
   );
 
   await check(
+    "Delete in a message tab acts on the real message and closes the tab",
+    client,
+    `
+    const tabmail = window.document.getElementById("tabmail");
+    const msg = hdr("All Mail", "tab");
+    tabmail.openTab("mailMessageTab", { messageURI: msg.folder.getUriForMsg(msg), background: false });
+    const tab = tabmail.currentTabInfo;
+    await until(() => tab.chromeBrowser?.contentWindow?.gMessage?.messageId == "tab@test", "message tab");
+    const win = tab.chromeBrowser.contentWindow;
+    await until(() => win.allMailPlusHooked, "message tab hooked");
+    win.commandController.doCommand("cmd_deleteMessage");
+    await until(() => has("Trash", "tab") && !has("Inbox", "tab"), "deleted");
+    await until(() => !tabmail.tabInfo.includes(tab), "tab closed");
+    if (!has("All Mail", "tab")) throw new Error("All Mail entry was touched");
+    `
+  );
+
+  await check(
+    "Junk without the move setting marks the real message and keeps the selection",
+    client,
+    `
+    Services.prefs.setBoolPref("mail.spam.manualMark", false);
+    try {
+      const win = await select("junkstay");
+      const before = win.threadTree.selectedIndex;
+      win.commandController.doCommand("cmd_markAsJunk");
+      await until(() => hdr("Inbox", "junkstay").getStringProperty("junkscore") == "100", "real score");
+      await sleep(500);
+      if (!has("Inbox", "junkstay")) throw new Error("message moved");
+      if (win.threadTree.selectedIndex != before) throw new Error("selection moved");
+    } finally {
+      Services.prefs.setBoolPref("mail.spam.manualMark", true);
+    }
+    `
+  );
+
+  await check(
+    "A candidate with another size is not treated as the real copy",
+    client,
+    `
+    if (cell("allMailPlusLocation", "All Mail", "sized") != "?") throw new Error("matched a different message");
+    const win = await select("sized");
+    win.commandController.doCommand("cmd_deleteMessage");
+    await sleep(1000);
+    if (!has("Inbox", "sized") || has("Trash", "sized")) throw new Error("different message was deleted");
+    `
+  );
+
+  await check(
     "Other folders keep native behavior",
     client,
     `
@@ -494,13 +549,6 @@ try {
     );
     console.log(`options page ${url}`);
     await screenshot(client, "options");
-    await client.run(
-      chrome(`
-        Services.prefs.setIntPref("layout.css.prefers-color-scheme.content-override", 1);
-        await sleep(1500);
-      `)
-    );
-    await screenshot(client, "options-light");
   }
 } catch (e) {
   console.log(`FAIL harness\n     ${e.stack}`);

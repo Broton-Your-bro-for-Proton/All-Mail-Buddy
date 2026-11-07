@@ -25,7 +25,7 @@ function coverageText(coverage) {
 }
 
 async function render() {
-  const [status, config] = await Promise.all([browser.allMailPlus.getStatus(), browser.storage.local.get(DEFAULTS)]);
+  const status = await browser.allMailPlus.getStatus();
   const body = $("accounts");
   body.replaceChildren(
     ...status.accounts.map(account => {
@@ -34,7 +34,8 @@ async function render() {
       toggle.type = "checkbox";
       toggle.checked = account.enabled;
       toggle.addEventListener("change", async () => {
-        const disabled = new Set(config.disabledAccounts);
+        const { disabledAccounts } = await browser.storage.local.get(DEFAULTS);
+        const disabled = new Set(disabledAccounts);
         toggle.checked ? disabled.delete(account.key) : disabled.add(account.key);
         await browser.storage.local.set({ disabledAccounts: [...disabled] });
       });
