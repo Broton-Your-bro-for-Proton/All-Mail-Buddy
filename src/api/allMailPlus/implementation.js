@@ -49,6 +49,7 @@ const controller = {
   accounts: new Map(), // server key -> account state
   unhooks: new Set(),
   timers: new Map(),
+  timerStarts: new Map(), // debounce name -> time of the first call since it last ran
   scanning: new Set(), // folder uris whose snapshot is being taken
   dirty: new Set(), // folder uris that changed during their snapshot
   pendingSync: false,
@@ -109,6 +110,7 @@ const controller = {
       clearTimeout(timer);
     }
     this.timers.clear();
+    this.timerStarts.clear();
     this.scanning.clear();
     this.dirty.clear();
     this.refreshedAt.clear();
@@ -146,12 +148,19 @@ const controller = {
     emitter.emit("notice", text);
   },
 
-  debounce(name, ms, fn) {
+  /** Runs fn once calls stop for ms, but no later than maxWait after the first call. */
+  debounce(name, ms, fn, maxWait = Infinity) {
+    const first = this.timerStarts.get(name) ?? Date.now();
+    if (this.timers.has(name) && Date.now() - first >= maxWait) {
+      return;
+    }
     clearTimeout(this.timers.get(name));
+    this.timerStarts.set(name, first);
     this.timers.set(
       name,
       setTimeout(() => {
         this.timers.delete(name);
+        this.timerStarts.delete(name);
         fn();
       }, ms)
     );
@@ -214,6 +223,7 @@ const controller = {
         index: new core.LocationIndex(),
         state: "indexing",
         lastSync: previous.get(server.key)?.lastSync ?? null,
+        serverCheck: previous.get(server.key)?.serverCheck ?? null,
         coverage: null,
         unreadable: new Set(),
         error: "",
@@ -316,7 +326,19 @@ const controller = {
   },
 
   coverageLater(account) {
-    this.debounce(`coverage:${account.key}`, 2000, () => this.updateCoverage(account));
+    // A rebuild may replace the account meanwhile; count the current one. Steady
+    // folder activity must not postpone the count forever.
+    this.debounce(
+      `coverage:${account.key}`,
+      2000,
+      () => {
+        const current = this.accounts.get(account.key);
+        if (current) {
+          this.updateCoverage(current);
+        }
+      },
+      10000
+    );
   },
 
   /**
@@ -477,6 +499,7 @@ const controller = {
       return;
     }
     account.checking = true;
+    account.checkedAt = Date.now();
     try {
       await this.syncChangedFolders(account);
     } finally {
@@ -899,7 +922,10 @@ const controller = {
         const account = controller.accountFor(folder);
         controller.coverageLater(account);
         // Opening All Mail is a good moment to look for changes made elsewhere.
-        controller.debounce(`check:${account.key}`, 2000, () => controller.checkChanges(account).catch(console.error));
+        // The check itself loads All Mail again, so at most every 30 seconds.
+        if (Date.now() - (account.checkedAt ?? 0) > 30000) {
+          controller.debounce(`check:${account.key}`, 2000, () => controller.checkChanges(account).catch(console.error));
+        }
         controller.refreshColumns();
       } else {
         controller.rescanLater(folder);

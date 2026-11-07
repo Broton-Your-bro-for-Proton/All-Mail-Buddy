@@ -11,13 +11,17 @@ import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { binaryFor } from "../../scripts/fetch-thunderbird.mjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { binaryFor, FAKESERVER_DIR } from "../../scripts/fetch-thunderbird.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const binary = process.argv[2] ?? process.env.TB_BINARY ?? binaryFor();
 if (!fs.existsSync(binary)) {
   console.error(`Thunderbird not found at ${binary}. Run "npm run setup:thunderbird" first.`);
+  process.exit(1);
+}
+if (!fs.existsSync(path.join(FAKESERVER_DIR, "mailnews", "Imapd.sys.mjs"))) {
+  console.error(`Fake IMAP server not found in ${FAKESERVER_DIR}. Run "npm run setup:thunderbird" first.`);
   process.exit(1);
 }
 const port = 2829;
@@ -234,6 +238,26 @@ const helpers = `
     return win;
   }
   const cell = (column, p, id) => ThreadPaneColumns.getColumn(column).handler.getCellText(hdr(p, id));
+  const urlListener = done => ({
+    QueryInterface: ChromeUtils.generateQI(["nsIUrlListener"]),
+    OnStartRunningUrl() {},
+    OnStopRunningUrl() { done(); },
+  });
+  const imapRoot = () => MailServices.accounts.accounts.find(a => a.incomingServer.type == "imap")?.incomingServer.rootFolder;
+  const ifolder = p => { try { return p.split("/").reduce((f, name) => f.getChildNamed(name), imapRoot()); } catch { return null; } };
+  const ihdr = (p, id) => { try { return ifolder(p).msgDatabase.getMsgHdrForMessageID(id + "@imap"); } catch { return null; } };
+  const icell = id => ThreadPaneColumns.getColumn("allMailPlusLocation").handler.getCellText(ihdr("All Mail", id));
+  const amStatus = name => {
+    const o = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
+    Services.obs.notifyObservers(o, "allmailplus-status");
+    return JSON.parse(o.data).accounts.find(a => a.name == name);
+  };
+  async function showImap(p) {
+    const win = pane();
+    win.displayFolder(ifolder(p));
+    await until(() => win.gFolder?.URI == ifolder(p).URI, "display " + p);
+    return win;
+  }
 `;
 
 function chrome(body) {
@@ -310,6 +334,7 @@ let client;
 try {
   client = await connect();
   await client.send("WebDriver:NewSession", { capabilities: {} });
+  await client.send("WebDriver:SetTimeouts", { script: 300000 });
   await client.send("Marionette:SetContext", { value: "chrome" });
   await client.send("WebDriver:SetWindowRect", { x: 0, y: 0, width: 1500, height: 900 });
 
@@ -661,6 +686,208 @@ try {
     `
   );
   await screenshot(client, "options");
+
+  // ---- IMAP ------------------------------------------------------------------
+  // Thunderbird's own fake IMAP server (from its test suite) runs inside the
+  // test Thunderbird and serves the Bridge layout over real IMAP.
+
+  await check(
+    "IMAP: a fake Bridge server is set up and synced",
+    client,
+    `
+    const tabmail = window.document.getElementById("tabmail");
+    while (tabmail.tabInfo.length > 1) tabmail.closeTab(tabmail.tabInfo.at(-1));
+    Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler)
+      .setSubstitution("testing-common", Services.io.newURI(args[0]));
+    const { nsMailServer } = ChromeUtils.importESModule("resource://testing-common/mailnews/Maild.sys.mjs");
+    const { ImapDaemon, ImapMessage, IMAP_RFC3501_handler, mixinExtension } =
+      ChromeUtils.importESModule("resource://testing-common/mailnews/Imapd.sys.mjs");
+    const daemon = new ImapDaemon();
+    daemon.inbox.subscribed = true;
+    const boxes = ["All Mail", "Folders", "Folders/Shops", "Folders/Finanzen", "Folders/Hidden", "Labels", "Labels/Wichtig", "Trash", "Spam", "Sent"];
+    for (const name of boxes) {
+      daemon.createMailbox(name, { subscribed: name != "Folders/Hidden", uidvalidity: daemon.uidvalidity++ });
+    }
+    const literal = (id, subject) => [
+      "Message-ID: <" + id + "@imap>",
+      "Date: Tue, 06 Jan 2026 10:00:00 +0000",
+      "From: Bob <bob@example.org>",
+      "To: Me <me@example.org>",
+      "Subject: " + subject,
+      "",
+      "Body of " + subject + ".",
+      "",
+    ].join("\\r\\n");
+    const uri = text => "data:text/plain," + encodeURIComponent(text);
+    const put = (box, id, subject) => {
+      const mailbox = daemon.getMailbox(box);
+      const message = new ImapMessage(uri(literal(id, subject)), mailbox.uidnext++, []);
+      mailbox.addMessage(message);
+      return message;
+    };
+    const idOf = message =>
+      (decodeURIComponent(message._URI.slice(message._URI.indexOf(",") + 1)).match(/^Message-ID:\\s*<([^>]+)>/im) ?? [])[1] ?? "";
+    // The fake server only answers SEARCH UNDELETED; Bridge also answers HEADER searches.
+    const headerSearch = {
+      SEARCH(searchArgs, uid) {
+        const wanted = [];
+        const walk = list => {
+          for (let i = 0; i < list.length; i++) {
+            if (Array.isArray(list[i])) {
+              walk(list[i]);
+            } else if (String(list[i]).toUpperCase() == "HEADER" && String(list[i + 1]).toLowerCase() == "message-id") {
+              wanted.push(String(list[i + 2]).toLowerCase());
+              i += 2;
+            }
+          }
+        };
+        walk(searchArgs);
+        window.allMailPlusTest.searches++;
+        const messages = this._selectedMailbox._messages;
+        const hits = messages.filter(m => !m.flags.includes("\\\\Deleted") &&
+          (!wanted.length || wanted.some(w => idOf(m).toLowerCase().includes(w))));
+        return "* SEARCH" + hits.map(m => " " + (uid ? m.uid : messages.indexOf(m) + 1)).join("") + "\\0OK SEARCH COMPLETED";
+      },
+    };
+    const server = new nsMailServer(d => {
+      const handler = new IMAP_RFC3501_handler(d);
+      mixinExtension(handler, headerSearch);
+      return handler;
+    }, daemon);
+    server.start();
+    window.allMailPlusTest = { daemon, server, put, idOf, uri, literal, ImapMessage, searches: 0 };
+    for (const [box, id, subject] of [["Folders/Shops", "shop", "Shop order"], ["Folders/Finanzen", "bill", "Bill"], ["Folders/Shops", "stale", "Old message"]]) {
+      put(box, id, subject);
+      put("All Mail", id, subject);
+    }
+
+    const incoming = MailServices.accounts.createIncomingServer("user", "localhost", "imap");
+    incoming.port = server.port;
+    incoming.password = "password";
+    incoming.prettyName = "Bridge IMAP";
+    const account = MailServices.accounts.createAccount();
+    account.incomingServer = incoming;
+    const identity = MailServices.accounts.createIdentity();
+    identity.email = "me@example.org";
+    account.addIdentity(identity);
+    await new Promise(resolve => MailServices.imap.discoverAllFolders(incoming.rootFolder, urlListener(resolve), null));
+    await until(() => ifolder("All Mail") && ifolder("Folders/Finanzen"), "IMAP folders discovered", 30000);
+    if (ifolder("Folders/Hidden")) throw new Error("the unsubscribed folder was discovered");
+    for (const p of ["Folders/Shops", "Folders/Finanzen", "All Mail"]) {
+      await showImap(p);
+    }
+    await until(() => ihdr("All Mail", "stale") && ihdr("Folders/Shops", "stale"), "folders synced", 90000).catch(e => {
+      const count = p => { try { return ifolder(p).getTotalMessages(false); } catch (err) { return String(err); } };
+      throw new Error(e.message + " " + JSON.stringify([!!ihdr("All Mail", "stale"), !!ihdr("Folders/Shops", "stale"), count("All Mail"), count("Folders/Shops")]));
+    });
+    `,
+    pathToFileURL(FAKESERVER_DIR).href + "/"
+  );
+
+  await check(
+    "IMAP: the Folder column resolves real folders",
+    client,
+    `
+    await until(() => icell("shop") == "Shops", "shop resolves", 30000).catch(e => {
+      let got;
+      try { got = icell("shop"); } catch (err) { got = String(err); }
+      throw new Error(e.message + ", got " + got);
+    });
+    if (icell("bill") != "Finanzen") throw new Error("bill: " + icell("bill"));
+    `
+  );
+
+  await check(
+    "IMAP: opening All Mail syncs the folders that changed on the server",
+    client,
+    `
+    await until(() => !amStatus("Bridge IMAP")?.serverCheck?.running, "no server check running", 90000);
+    // Keep the daily server check out of this test.
+    Services.prefs.setStringPref("extensions.allmailplus.serverCheck",
+      JSON.stringify({ last: { [imapRoot().server.key]: Date.now() }, repaired: {} }));
+    const t = window.allMailPlusTest;
+    t.put("Folders/Finanzen", "new", "New bill");
+    t.put("All Mail", "new", "New bill");
+    await showImap("Folders/Shops");
+    await showImap("All Mail");
+    await until(() => ihdr("All Mail", "new") && icell("new") == "Finanzen", "new message resolves", 45000);
+    `
+  );
+
+  await check(
+    "IMAP: the daily server check repairs only the folder whose local list is wrong",
+    client,
+    `
+    const name = "Bridge IMAP";
+    await until(() => !amStatus(name)?.serverCheck?.running, "no server check running", 90000);
+    const t = window.allMailPlusTest;
+    // Bridge reuses the UID of "stale" in Shops for another message. The UID set
+    // and counts stay the same, so Thunderbird keeps its old header.
+    const shops = t.daemon.getMailbox("Folders/Shops");
+    const index = shops._messages.findIndex(m => t.idOf(m) == "stale@imap");
+    shops._messages[index] = new t.ImapMessage(t.uri(t.literal("fresh", "Fresh message")), shops._messages[index].uid, []);
+    const allMail = t.daemon.getMailbox("All Mail");
+    allMail._messages.splice(allMail._messages.findIndex(m => t.idOf(m) == "stale@imap"), 1);
+    t.put("All Mail", "fresh", "Fresh message");
+    Services.prefs.clearUserPref("extensions.allmailplus.serverCheck");
+    const since = Date.now();
+    const searches = t.searches;
+    await showImap("Folders/Shops");
+    await showImap("All Mail");
+    await until(() => ihdr("All Mail", "fresh"), "fresh in All Mail", 30000);
+    if (ihdr("Folders/Shops", "fresh")) throw new Error("Thunderbird noticed the change by itself, the scenario is not reproduced");
+    await until(() => {
+      const c = amStatus(name)?.serverCheck;
+      return c && c.auto && c.startedAt >= since && !c.running;
+    }, "daily check ran", 120000).catch(e => {
+      throw new Error(e.message + " " + JSON.stringify(amStatus(name)) + " fresh=" + icell("fresh") + " shopsFresh=" + !!ihdr("Folders/Shops", "fresh"));
+    });
+    const report = amStatus(name).serverCheck;
+    if (report.error) throw new Error(report.error);
+    if (report.repaired.join() != "Shops") throw new Error("repaired: " + JSON.stringify(report));
+    if (t.searches == searches) throw new Error("no IMAP search was sent");
+    await until(() => icell("fresh") == "Shops", "fresh resolves after the repair", 60000).catch(e => {
+      const ids = [...ifolder("Folders/Shops").messages].map(h => h.messageKey + ":" + h.messageId + ":" + h.flags);
+      throw new Error(e.message + ", got " + icell("fresh") + " shops=" + ids.join(",") + " report=" + JSON.stringify(report));
+    });
+    `
+  );
+
+  await check(
+    "IMAP: open the settings page",
+    client,
+    `
+    const url = WebExtensionPolicy.getByID(args[0]).getURL("options/options.html");
+    window.document.getElementById("tabmail").openTab("contentTab", { url });
+    await sleep(2000);
+    `,
+    addon
+  );
+
+  await checkPage(
+    "IMAP: the settings page lists unsubscribed server folders and checks the server on demand",
+    client,
+    `
+    doc.getElementById("listFolders").click();
+    await until(() => doc.getElementById("serverFolders").textContent.includes("Folders/Hidden"), "hidden folder listed", 30000);
+    const rows = [...doc.querySelectorAll("#serverFolders tbody tr")].map(r => r.textContent);
+    if (rows.length != 1 || !rows[0].includes("no")) throw new Error("rows: " + rows.join(" | "));
+    const state = () =>
+      [...doc.querySelectorAll("#serverCheck tbody tr")].find(r => r.cells[0].textContent == "Bridge IMAP")?.cells[2].textContent ?? "";
+    const button = doc.getElementById("checkServer");
+    await until(() => !button.disabled, "no check running", 90000);
+    const box = button.getBoundingClientRect();
+    if (!box.width || content.getComputedStyle(button).visibility != "visible") throw new Error("check button is not visible");
+    button.click();
+    await until(() => state().startsWith("running"), "manual check started", 10000).catch(() => {});
+    await until(() => state().startsWith("run done"), "manual check done", 90000).catch(e => {
+      throw new Error(e.message + ", state " + state());
+    });
+    if (state() != "run done") throw new Error("state: " + state());
+    doc.getElementById("serverCheck").scrollIntoView();
+    `
+  );
+  await screenshot(client, "options-imap");
 
   if (results.some(r => !r.ok)) {
     const log = await client.run(
