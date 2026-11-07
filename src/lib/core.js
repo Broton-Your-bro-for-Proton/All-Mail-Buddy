@@ -6,6 +6,11 @@ var AllMailCore = (() => {
   const FOLDERS = "Folders";
   const LABELS = "Labels";
   const STARRED = "Starred";
+  // Thunderbird stores some copies of the same Bridge message 2 bytes shorter
+  // (seen 2994 times on a real account), so sizes may differ by this much.
+  const SIZE_TOLERANCE = 2;
+
+  const sameSize = (a, b) => Math.abs(a - b) <= SIZE_TOLERANCE;
 
   /**
    * True when the child folder names of an account root look like Proton Bridge.
@@ -123,9 +128,9 @@ var AllMailCore = (() => {
      */
     resolve({ id, size, date }) {
       const refs = [...(this.byId.get(id) ?? [])];
-      // Bridge serves the same literal everywhere, so a real copy always has the
-      // same size and date. A copy that differs is another message.
-      const narrow = list => list.filter(r => r.size == size && r.date == date);
+      // Bridge serves the same literal everywhere, so a real copy has the same
+      // date and (almost) the same size. A copy that differs is another message.
+      const narrow = list => list.filter(r => sameSize(r.size, size) && r.date == date);
       const ofKind = kind => refs.filter(r => this.folders.get(r.uri).kind == kind);
       const candidates = ofKind("real");
       const matches = narrow(candidates);
@@ -135,7 +140,7 @@ var AllMailCore = (() => {
         if (!candidates.length) {
           reason = refs.length ? "label-only" : "no-copy";
         } else {
-          const sizeOk = candidates.some(r => r.size == size);
+          const sizeOk = candidates.some(r => sameSize(r.size, size));
           const dateOk = candidates.some(r => r.date == date);
           reason = sizeOk ? "date" : dateOk ? "size" : "size-date";
         }
@@ -170,7 +175,19 @@ var AllMailCore = (() => {
     return result.status == "unique" ? [] : [...new Set(refs.map(r => r.uri))];
   }
 
-  return { isBridgeRoot, classify, LocationIndex, staleUris };
+  /**
+   * Whether a folder must be synced after an IMAP STATUS check. A changed
+   * MESSAGES or UIDNEXT since the last check means something was added, moved
+   * or deleted on the server. Without an earlier check, a local message count
+   * that differs from the server's means the folder was never fully synced.
+   *
+   * @param {{previous: ?string, total: number, nextUid: number, localCount: number}} status
+   */
+  function needsSync({ previous, total, nextUid, localCount }) {
+    return previous ? previous != `${total}/${nextUid}` : total != localCount;
+  }
+
+  return { isBridgeRoot, classify, LocationIndex, staleUris, sameSize, needsSync };
 })();
 
 if (typeof module == "object") {
