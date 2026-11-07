@@ -169,6 +169,17 @@ test("judges online search hits", () => {
   assert.equal(hitVerdict(searched, "other@y"), "broken");
   // HEADER search matches substrings; a longer ID is not proof of a broken list.
   assert.equal(hitVerdict(searched, "1a@x"), "");
+  // IMAP SEARCH ignores case.
+  assert.equal(hitVerdict(searched, "1A@X"), "");
+});
+
+test("the daily run repairs a folder at most once a week", () => {
+  const { mayRepair } = require("../src/lib/core.js");
+  const day = 24 * 60 * 60 * 1000;
+  assert.equal(mayRepair({ auto: true, repairedAt: undefined, now: 10 * day }), true);
+  assert.equal(mayRepair({ auto: true, repairedAt: 5 * day, now: 10 * day }), false);
+  assert.equal(mayRepair({ auto: true, repairedAt: 3 * day, now: 10 * day }), true);
+  assert.equal(mayRepair({ auto: false, repairedAt: 9 * day, now: 10 * day }), true);
 });
 
 test("lists server folders that Thunderbird does not have", () => {

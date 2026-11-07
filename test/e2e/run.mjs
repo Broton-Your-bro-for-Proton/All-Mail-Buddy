@@ -657,6 +657,7 @@ try {
     }
     doc.getElementById("listFolders").click();
     await until(() => doc.getElementById("serverFolders").textContent.includes("every folder"), "server folder list");
+    doc.getElementById("serverCheck").scrollIntoView();
     `
   );
   await screenshot(client, "options");

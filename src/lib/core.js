@@ -203,8 +203,10 @@ var AllMailCore = (() => {
     if (searched.has(hitId)) {
       return "stale";
     }
-    // IMAP HEADER search matches substrings, so a longer ID may contain a searched one.
-    return [...searched].some(id => hitId.includes(id)) ? "" : "broken";
+    // IMAP HEADER search matches substrings and ignores case, so a longer ID
+    // may contain a searched one.
+    const hit = hitId.toLowerCase();
+    return [...searched].some(id => hit.includes(id.toLowerCase())) ? "" : "broken";
   }
 
   /** Server folder paths that Thunderbird does not have. */
@@ -220,7 +222,13 @@ var AllMailCore = (() => {
     return !!enabled && nofolder > 0 && now - last >= DAY;
   }
 
+  /** The daily run repairs a folder at most once a week; a click always may. */
+  function mayRepair({ auto, repairedAt, now }) {
+    return !auto || !repairedAt || now - repairedAt >= 7 * DAY;
+  }
+
   return {
+    mayRepair,
     isBridgeRoot,
     classify,
     LocationIndex,

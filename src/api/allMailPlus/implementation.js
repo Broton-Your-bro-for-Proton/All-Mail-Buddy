@@ -33,7 +33,7 @@ const RESOURCE_HOST = "allmailplus";
 const STATUS_TOPIC = "allmailplus-status";
 const CHECK_SECONDS = 60;
 const SEARCH_CHUNK = 100; // Message-IDs per IMAP SEARCH
-const LAST_CHECK_PREF = "extensions.allmailplus.lastServerCheck"; // seconds
+const STATE_PREF = "extensions.allmailplus.serverCheck"; // JSON, see checkState()
 const resourceHandler = () =>
   Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler);
 
@@ -57,6 +57,7 @@ const controller = {
   checkTimer: null,
   statusSeen: new Map(), // folder uri -> "MESSAGES/UIDNEXT" from the last STATUS check
   loadWaiters: new Map(), // folder uri -> callback for its next FolderLoaded
+  serverChecks: new Set(), // server keys with a running server check
   lastNotice: "",
 
   // ---- lifecycle -------------------------------------------------------
@@ -114,7 +115,10 @@ const controller = {
     clearTimeout(this.syncTimer);
     clearTimeout(this.checkTimer);
     this.statusSeen.clear();
-    this.loadWaiters.clear();
+    for (const done of [...this.loadWaiters.values()]) {
+      done();
+    }
+    this.serverChecks.clear();
     resourceHandler().setSubstitution(RESOURCE_HOST, null);
     ThreadPaneColumns.removeCustomColumn(LOCATION_COLUMN);
     ThreadPaneColumns.removeCustomColumn(LABELS_COLUMN);
@@ -369,11 +373,11 @@ const controller = {
     const due = core.serverCheckDue({
       enabled: this.config.dailyServerCheck,
       nofolder: coverage.nofolder,
-      last: Services.prefs.getIntPref(LAST_CHECK_PREF, 0) * 1000,
+      last: this.checkState().last[account.server.key] ?? 0,
       now: Date.now(),
     });
     if (due && account.state == "ready") {
-      this.checkServer(account).catch(console.error);
+      this.checkServer(account, { auto: true }).catch(console.error);
     }
   },
 
@@ -382,12 +386,16 @@ const controller = {
   },
 
   /** Every All Mail message without exactly one real copy, with the reason. */
-  problems(account) {
+  async problems(account) {
     const list = [];
     const db = account.allMail.msgDatabase;
     const signed = n => `${n > 0 ? "+" : ""}${n}`;
-    for (const key of db.listAllKeys()) {
-      const hdr = db.getMsgHdrForKey(key);
+    const keys = db.listAllKeys();
+    for (let i = 0; i < keys.length; i++) {
+      if (i % 2000 == 1999) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      const hdr = db.getMsgHdrForKey(keys[i]);
       const entry = this.entryOf(hdr);
       const result = account.index.resolve(entry);
       if (result.status == "unique") {
@@ -464,7 +472,8 @@ const controller = {
   },
 
   async checkChanges(account) {
-    if (account.server.type != "imap" || account.state != "ready" || account.checking) {
+    const busy = account.checking || this.serverChecks.has(account.server.key);
+    if (account.server.type != "imap" || account.state != "ready" || busy) {
       return;
     }
     account.checking = true;
@@ -503,75 +512,135 @@ const controller = {
 
   // ---- server check ----------------------------------------------------------
 
+  /** Persistent check state: {last: {serverKey: ms}, repaired: {folderUri: ms}}. */
+  checkState() {
+    try {
+      return { last: {}, repaired: {}, ...JSON.parse(Services.prefs.getStringPref(STATE_PREF, "{}")) };
+    } catch {
+      return { last: {}, repaired: {} };
+    }
+  },
+
+  saveCheckState(state) {
+    Services.prefs.setStringPref(STATE_PREF, JSON.stringify(state));
+  },
+
   /**
    * Looks up every message without a folder on the server, with one IMAP
    * SEARCH per real folder and batch of Message-IDs. A hit whose local header
    * is another message shows a local list that no longer matches the server.
    * Only those folders are repaired, the way Thunderbird's own "Repair Folder"
-   * does it; folders that have the message are rescanned.
+   * does it; folders that have the message are rescanned. The daily run does
+   * not repair the same folder again within a week.
    */
-  async checkServer(account) {
-    if (account.server.type != "imap" || account.state != "ready" || account.serverCheck?.running) {
+  async checkServer(account, { auto = false } = {}) {
+    const key = account.server.key;
+    if (account.server.type != "imap" || account.state != "ready" || this.serverChecks.has(key)) {
       return;
     }
-    Services.prefs.setIntPref(LAST_CHECK_PREF, Math.floor(Date.now() / 1000));
     // Thunderbird makes up "md5:" IDs for messages without one; the server has no such header.
     const ids = [...(account.orphanIds ?? [])].filter(id => !id.startsWith("md5:"));
     const report = {
       running: true,
+      auto,
       startedAt: Date.now(),
       finishedAt: 0,
       messages: ids.length,
       folders: 0,
       searched: 0,
+      failed: 0,
       repaired: [],
       rescanned: [],
-      busy: [],
+      skipped: [],
       error: "",
     };
     account.serverCheck = report;
+    const state = this.checkState();
+    state.last[key] = Date.now();
+    this.saveCheckState(state);
+    if (Services.io.offline) {
+      Object.assign(report, { running: false, finishedAt: Date.now(), error: "Thunderbird is offline." });
+      return;
+    }
+    this.serverChecks.add(key);
+    const alive = () => this.started && this.accounts.get(key) === account;
+    const errors = [];
     try {
       const folders = ids.length ? this.trackedFolders(account).filter(f => this.describe(f).kind == "real") : [];
       report.folders = folders.length;
       const broken = new Set();
       const stale = new Set();
+      const dbService = Cc["@mozilla.org/msgDatabase/msgDBService;1"].getService(Ci.nsIMsgDBService);
       for (const folder of folders) {
+        const wasOpen = !!dbService.cachedDBForFolder(folder);
         for (let i = 0; i < ids.length; i += SEARCH_CHUNK) {
+          if (!alive()) {
+            return;
+          }
           const searched = new Set(ids.slice(i, i + SEARCH_CHUNK));
-          for (const id of await this.searchOnline(folder, searched)) {
+          const { hits, ok } = await this.searchOnline(folder, searched);
+          report.failed += ok ? 0 : 1;
+          for (const id of hits) {
             const verdict = core.hitVerdict(searched, id);
             if (verdict) {
               (verdict == "broken" ? broken : stale).add(folder);
             }
           }
         }
+        if (!wasOpen) {
+          try {
+            folder.closeDBIfFolderNotOpen(false);
+          } catch {}
+        }
         report.searched++;
       }
       for (const folder of broken) {
-        const name = this.describe(folder).name;
-        if (folder.locked) {
-          report.busy.push(name);
-          continue;
+        if (!alive()) {
+          return;
         }
-        await this.repairFolder(folder);
-        report.repaired.push(name);
+        const name = this.describe(folder).name;
+        const now = Date.now();
+        if (folder.locked || folder.getFlag(Flags.OfflineEvents)) {
+          // Busy, or holds changes made offline that a repair would drop.
+          report.skipped.push(`${name} (busy)`);
+        } else if (!core.mayRepair({ auto, repairedAt: state.repaired[folder.URI], now })) {
+          report.skipped.push(`${name} (repaired this week)`);
+        } else {
+          try {
+            await this.repairFolder(folder);
+            report.repaired.push(name);
+            state.repaired[folder.URI] = now;
+            this.saveCheckState(state);
+          } catch (e) {
+            errors.push(`${name}: ${e.message}`);
+          }
+        }
       }
       for (const folder of new Set([...broken, ...stale])) {
-        await this.scanFolder(account, folder);
+        if (alive()) {
+          await this.scanFolder(account, folder);
+        }
       }
       report.rescanned = [...stale].filter(f => !broken.has(f)).map(f => this.describe(f).name);
     } catch (e) {
-      report.error = String(e);
+      errors.push(String(e));
       console.error("All Mail+:", e);
     } finally {
+      if (report.failed) {
+        errors.unshift(`${report.failed} searches failed or timed out`);
+      }
+      report.error = errors.join("; ");
       report.running = false;
       report.finishedAt = Date.now();
-      this.coverageLater(account);
-      this.refreshColumns();
+      this.serverChecks.delete(key);
+      if (alive()) {
+        this.coverageLater(account);
+        this.refreshColumns();
+      }
     }
   },
 
-  /** @returns {Promise<string[]>} Message-IDs of the local headers the server search hit. */
+  /** @returns {Promise<{hits: string[], ok: boolean}>} Message-IDs of the local headers the search hit. */
   searchOnline(folder, ids) {
     return new Promise(resolve => {
       const attrib = Ci.nsMsgSearchAttrib.OtherHeader + 1; // any custom header
@@ -596,25 +665,26 @@ const controller = {
         onSearchHit(hdr) {
           hits.push(hdr.messageId);
         },
-        onSearchDone: () => done(),
+        onSearchDone: status => done(Components.isSuccessCode(status)),
         onResetSearch() {},
         onNewSearch() {},
       };
-      const done = () => {
+      const done = ok => {
         if (!finished) {
           finished = true;
           clearTimeout(timer);
           session.unregisterListener(listener);
-          resolve(hits);
+          resolve({ hits, ok });
         }
       };
-      const timer = setTimeout(done, 120000);
+      const timer = setTimeout(() => done(false), 120000);
       session.registerListener(listener);
       try {
-        session.search(this.msgWindow());
+        // No window: background searches should not report into the user's window.
+        session.search(null);
       } catch (e) {
         console.error("All Mail+: search failed in", folder.URI, e);
-        done();
+        done(false);
       }
     });
   },
@@ -623,22 +693,29 @@ const controller = {
     return Services.wm.getMostRecentWindow("mail:3pane")?.msgWindow ?? null;
   },
 
-  about3Pane() {
+  /** Thunderbird's own "Repair Folder" (about3Pane up to 15x, FolderCommands later). */
+  rebuildFolderSummary() {
     for (const win of Services.wm.getEnumerator("mail:3pane")) {
       for (const tab of win.document.getElementById("tabmail")?.tabInfo ?? []) {
-        const about = tab.chromeBrowser?.contentWindow;
-        if (about?.folderPane?.rebuildFolderSummary) {
-          return about;
+        const pane = tab.chromeBrowser?.contentWindow?.folderPane;
+        if (pane?.rebuildFolderSummary) {
+          return folder => pane.rebuildFolderSummary(folder);
         }
       }
     }
+    try {
+      const { FolderCommands } = ChromeUtils.importESModule("chrome://messenger/content/FolderCommands.mjs");
+      if (FolderCommands?.rebuildFolderSummary) {
+        return folder => FolderCommands.rebuildFolderSummary(folder);
+      }
+    } catch {}
     return null;
   },
 
-  /** Thunderbird's own "Repair Folder", then waits until the folder is loaded again. */
+  /** Repairs a folder, then waits until it is loaded again. */
   async repairFolder(folder) {
-    const about = this.about3Pane();
-    if (!about) {
+    const rebuild = this.rebuildFolderSummary();
+    if (!rebuild) {
       throw new Error("no mail window is open to repair folders in");
     }
     const loaded = new Promise(resolve => {
@@ -650,7 +727,7 @@ const controller = {
       const timer = setTimeout(done, 180000);
       this.loadWaiters.set(folder.URI, done);
     });
-    await about.folderPane.rebuildFolderSummary(folder);
+    await rebuild(folder);
     await loaded;
   },
 
@@ -662,17 +739,20 @@ const controller = {
     const server = account.server.QueryInterface(Ci.nsISubscribableServer);
     const found = [];
     try {
-      await new Promise(resolve => {
-        const timer = setTimeout(resolve, 60000);
+      const complete = await new Promise(resolve => {
+        const timer = setTimeout(() => resolve(false), 60000);
         server.subscribeListener = {
           QueryInterface: ChromeUtils.generateQI(["nsISubscribeListener"]),
           OnDonePopulating() {
             clearTimeout(timer);
-            resolve();
+            resolve(true);
           },
         };
-        server.startPopulating(this.msgWindow(), true, false);
+        server.startPopulating(null, true, false);
       });
+      if (!complete) {
+        throw new Error("the server did not send its folder list in time");
+      }
       const walk = path => {
         for (const child of server.getChildURIs(path)) {
           found.push({ path: child, subscribed: server.isSubscribed(child), selectable: server.isSubscribable(child) });
@@ -686,9 +766,12 @@ const controller = {
       server.subscribeListener = null;
       server.subscribeCleanup();
     }
+    // The subscribe tree always uses "/" between levels.
     const local = account.root.descendants.map(folder => {
       try {
-        return folder.QueryInterface(Ci.nsIMsgImapMailFolder).onlineName;
+        const imap = folder.QueryInterface(Ci.nsIMsgImapMailFolder);
+        const delimiter = imap.hierarchyDelimiter;
+        return delimiter && delimiter != "/" ? imap.onlineName.replaceAll(delimiter, "/") : imap.onlineName;
       } catch {
         return "";
       }
@@ -715,7 +798,8 @@ const controller = {
 
   async syncAll() {
     for (const account of [...this.accounts.values()]) {
-      if (account.state != "ready") {
+      // A running server check repairs folders; a sync must not overlap it.
+      if (account.state != "ready" || this.serverChecks.has(account.server.key)) {
         continue;
       }
       account.state = "syncing";
@@ -1459,7 +1543,6 @@ const controller = {
     const detected = this.started ? this.detectAccounts() : [];
     return {
       lastNotice: this.lastNotice,
-      lastServerCheck: Services.prefs.getIntPref(LAST_CHECK_PREF, 0) * 1000,
       accounts: detected.map(({ server, enabled }) => {
         const account = this.accounts.get(server.key);
         return {
@@ -1471,6 +1554,7 @@ const controller = {
           coverage: account?.coverage ?? null,
           unreadable: [...(account?.unreadable ?? [])],
           serverCheck: account?.serverCheck ?? null,
+          lastServerCheck: this.checkState().last[server.key] ?? 0,
           error: account?.error ?? "",
           ...(account?.index.stats() ?? { folders: 0, messages: 0 }),
         };
@@ -1511,10 +1595,12 @@ this.allMailPlus = class extends ExtensionCommon.ExtensionAPI {
             }))
           ),
         listProblems: async () =>
-          [...controller.accounts.values()].map(account => ({
-            name: account.server.prettyName,
-            messages: account.state == "indexing" ? [] : controller.problems(account),
-          })),
+          Promise.all(
+            [...controller.accounts.values()].map(async account => ({
+              name: account.server.prettyName,
+              messages: account.state == "indexing" ? [] : await controller.problems(account),
+            }))
+          ),
         onNotice: new ExtensionCommon.EventManager({
           context,
           name: "allMailPlus.onNotice",

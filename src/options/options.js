@@ -146,25 +146,29 @@ function renderDiagnosis(status) {
   $("diagnosis").replaceChildren(...parts);
 }
 
+function checkState(c) {
+  if (!c) {
+    return "not run since Thunderbird started";
+  }
+  if (c.running) {
+    return `running, ${c.searched} of ${c.folders} folders searched`;
+  }
+  return `${c.auto ? "daily run" : "run"} done${c.error ? ` with errors: ${c.error}` : ""}`;
+}
+
 function renderServerCheck(status) {
-  const rows = status.accounts
-    .filter(a => a.serverCheck)
-    .map(({ name, serverCheck: c }) => [
-      name,
-      c.running ? `running, ${c.searched} of ${c.folders} folders searched` : c.error ? `failed: ${c.error}` : `done ${time(c.finishedAt)}`,
-      cell(c.messages, "num"),
-      c.repaired.join(", ") || "none",
-      c.rescanned.join(", ") || "none",
-      c.busy.join(", "),
-    ]);
-  const last = Object.assign(document.createElement("p"), {
-    className: "muted",
-    textContent: `Last check: ${time(status.lastServerCheck) || "never"}.`,
-  });
+  const rows = status.accounts.map(({ name, lastServerCheck, serverCheck: c }) => [
+    name,
+    time(lastServerCheck) || "never",
+    checkState(c),
+    cell(c ? c.messages : "", "num"),
+    c ? c.repaired.join(", ") || "none" : "",
+    c ? c.rescanned.join(", ") || "none" : "",
+    c ? c.skipped.join(", ") : "",
+  ]);
   $("serverCheck").replaceChildren(
-    last,
     ...(rows.length
-      ? [table(["Account", "State", "Messages looked up", "Repaired folders", "Rescanned folders", "Busy, skipped"], rows)]
+      ? [table(["Account", "Last check", "State", "Messages looked up", "Repaired", "Rescanned", "Skipped"], rows)]
       : [])
   );
   $("checkServer").disabled = status.accounts.some(a => a.serverCheck?.running);
@@ -175,10 +179,11 @@ async function render() {
   renderAccounts(status);
   renderDiagnosis(status);
   renderServerCheck(status);
-  $("notice").textContent = status.lastNotice || "None.";
+  $("notice").textContent = pageNotice || status.lastNotice || "None.";
 }
 
 let problems = [];
+let pageNotice = "";
 
 function renderProblems() {
   const filter = $("problemFilter").value;
@@ -231,6 +236,8 @@ async function run(button, action) {
   button.disabled = true;
   try {
     await action();
+  } catch (e) {
+    pageNotice = `${button.textContent} failed: ${e.message}`;
   } finally {
     button.disabled = false;
     render();

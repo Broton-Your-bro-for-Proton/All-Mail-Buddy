@@ -87,8 +87,11 @@ Thunderbird's own *Repair Folder*. That repair also deletes the folder's
 offline copies, which Thunderbird downloads again if offline sync is enabled.
 Folders whose hit is the searched message are only rescanned.
 
-The check runs from the settings page, and once a day when messages without a
-folder exist. The daily run can be turned off in the settings.
+The check runs from the settings page, and once a day per account when
+messages without a folder exist. The daily run can be turned off in the
+settings, and it repairs the same folder at most once a week. Folders that hold
+changes made while offline are never repaired, the check does not run while
+Thunderbird is offline, and syncs pause while it runs.
 
 *List server folders missing in Thunderbird* reads the full folder list from
 the server, as the Subscribe dialog does, and shows every folder Thunderbird
