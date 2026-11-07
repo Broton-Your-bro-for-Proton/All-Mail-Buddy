@@ -71,6 +71,36 @@ expunges it, and Proton deletes for good what is expunged from Trash or Spam.
 Messages are only treated as having no folder once every folder was indexed
 and read.
 
+## Server check
+
+A message can also look folderless because Thunderbird's local list of its real
+folder no longer matches the server, for example after Bridge assigned new
+UIDs. Thunderbird's normal sync only compares UIDs and flags, so it does not
+notice; only *Repair Folder* fixes such a folder.
+
+The server check finds those folders without repairing everything. It looks up
+the Message-ID of every message without a folder with an IMAP SEARCH in each
+real folder, 100 IDs per search. Thunderbird reports a hit with its local
+header for that UID. When that local header is a different message, the
+folder's local list is wrong, and only that folder is repaired with
+Thunderbird's own *Repair Folder*. That repair also deletes the folder's
+offline copies, which Thunderbird downloads again if offline sync is enabled.
+Folders whose hit is the searched message are only rescanned.
+
+The check runs from the settings page, and once a day per account when
+messages without a folder exist. The daily run can be turned off in the
+settings, and it repairs the same folder at most once a week. Folders that hold
+changes made while offline are never repaired, the check does not run while
+Thunderbird is offline, and syncs pause while it runs.
+
+*List server folders missing in Thunderbird* reads the full folder list from
+the server, as the Subscribe dialog does, and shows every folder Thunderbird
+does not have, with its subscription state.
+
+The settings page shows the problems as a table. *Show all affected messages*
+lists every All Mail message without exactly one matching copy, with date,
+sender, subject, problem and details, and can be filtered by problem.
+
 ## Junk
 
 Marking as junk follows Thunderbird's own setting under *Settings > Privacy &
@@ -107,6 +137,8 @@ on the add-on with real mail, check once with Bridge running:
 4. Drag one test message from All Mail onto a folder.
 5. Delete one message shown as "No folder" and confirm in Proton's web app
    that it is now in Trash, and only once.
+6. Run *Check server now* and compare the repaired folders with Proton's web
+   app; run *List server folders missing in Thunderbird* once.
 
 ## Limits
 

@@ -1,6 +1,6 @@
 "use strict";
 
-const DEFAULTS = { syncOnStartup: true, syncIntervalMinutes: 15, disabledAccounts: [] };
+const DEFAULTS = { syncOnStartup: true, syncIntervalMinutes: 15, dailyServerCheck: true, disabledAccounts: [] };
 const $ = id => document.getElementById(id);
 
 function cell(text, className = "") {
@@ -10,11 +10,37 @@ function cell(text, className = "") {
   return td;
 }
 
-const REASONS = {
-  size: "size differs",
-  date: "date differs",
-  "size-date": "size and date differ",
+function row(...cells) {
+  const tr = document.createElement("tr");
+  tr.append(...cells.map(c => (c instanceof Node ? c : cell(c))));
+  return tr;
+}
+
+/** A table with a header row; rows are arrays of texts or cells. */
+function table(headers, rows) {
+  const t = document.createElement("table");
+  const head = document.createElement("thead");
+  head.append(row(...headers.map(h => Object.assign(document.createElement("th"), { textContent: h }))));
+  const body = document.createElement("tbody");
+  body.append(...rows.map(cells => row(...cells)));
+  t.append(head, body);
+  return t;
+}
+
+const PROBLEMS = {
+  ambiguous: "Ambiguous",
+  missing: "Copy differs",
+  nofolder: "No folder",
 };
+
+const REASONS = {
+  size: ["Size differs", "A real copy with the same Message-ID has another size."],
+  date: ["Date differs", "A real copy with the same Message-ID has another date."],
+  "size-date": ["Size and date differ", "A real copy with the same Message-ID differs in size and date."],
+};
+
+const day = ms => (ms ? new Date(ms).toLocaleDateString() : "");
+const time = ms => (ms ? new Date(ms).toLocaleString() : "");
 
 const topDeltas = (map, unit) =>
   Object.entries(map)
@@ -23,31 +49,33 @@ const topDeltas = (map, unit) =>
     .map(([delta, n]) => `${delta > 0 ? "+" : ""}${delta} ${unit} (${n}x)`)
     .join(", ");
 
-/** Why All Mail messages were not matched, as plain sentences. */
-function diagnosisText(account) {
+/** Rows of the problem table: [problem, count, meaning, details]. */
+function problemRows(account) {
   const { coverage, unreadable } = account;
-  const lines = [];
-  if (coverage?.missing) {
-    const reasons = Object.entries(coverage.reasons).map(([key, n]) => `${n} ${REASONS[key] ?? key}`);
-    lines.push(`Not found: ${reasons.join(", ")}.`);
-    if (Object.keys(coverage.sizeDeltas).length) {
-      lines.push(`Size of the closest copy is off by: ${topDeltas(coverage.sizeDeltas, "bytes")}.`);
-    }
-    if (Object.keys(coverage.dateDeltas).length) {
-      lines.push(`Date of the closest copy is off by: ${topDeltas(coverage.dateDeltas, "s")}.`);
-    }
+  const rows = [];
+  if (coverage?.ambiguous) {
+    rows.push([PROBLEMS.ambiguous, coverage.ambiguous, "Several real folders hold a matching copy. They are synced again.", ""]);
+  }
+  for (const [key, n] of Object.entries(coverage?.reasons ?? {})) {
+    const [name, meaning] = REASONS[key] ?? [key, ""];
+    const deltas = [
+      key != "date" && topDeltas(coverage.sizeDeltas, "bytes"),
+      key != "size" && topDeltas(coverage.dateDeltas, "s"),
+    ].filter(Boolean);
+    rows.push([name, n, meaning, deltas.join("; ")]);
   }
   if (coverage?.nofolder) {
-    const examples = coverage.examples.map(e => `"${e.subject}" (${new Date(e.date).toLocaleDateString()})`);
-    lines.push(
-      `No folder: ${coverage.nofolder} messages are only in All Mail, for example after a move to a local folder. ` +
-        `Delete, move, archive and junk file them into the target folder. Examples: ${examples.join(", ")}.`
-    );
+    rows.push([
+      PROBLEMS.nofolder,
+      coverage.nofolder,
+      "Only in All Mail, or in a folder whose local list is out of date. The server check tells them apart.",
+      "Actions file them into the target folder.",
+    ]);
   }
   if (unreadable?.length) {
-    lines.push(`Folders that could not be read: ${unreadable.join(", ")}.`);
+    rows.push(["Unreadable folders", unreadable.length, "Thunderbird could not open these folders.", unreadable.join(", ")]);
   }
-  return lines.join(" ");
+  return rows;
 }
 
 function coverageText(coverage) {
@@ -67,12 +95,9 @@ function coverageText(coverage) {
   return parts.join(", ");
 }
 
-async function render() {
-  const status = await browser.allMailPlus.getStatus();
-  const body = $("accounts");
-  body.replaceChildren(
+function renderAccounts(status) {
+  $("accounts").replaceChildren(
     ...status.accounts.map(account => {
-      const tr = document.createElement("tr");
       const toggle = document.createElement("input");
       toggle.type = "checkbox";
       toggle.checked = account.enabled;
@@ -84,35 +109,135 @@ async function render() {
       });
       const active = document.createElement("td");
       active.append(toggle);
-      tr.append(
+      return row(
         active,
-        cell(account.name),
+        account.name,
         cell(account.error || account.state, `state-${account.state}`),
         cell(account.folders, "num"),
         cell(account.messages, "num"),
-        cell(coverageText(account.coverage)),
-        cell(account.lastSync ? new Date(account.lastSync).toLocaleString() : "")
+        coverageText(account.coverage),
+        time(account.lastSync)
       );
-      const diagnosis = diagnosisText(account);
-      if (!diagnosis) {
-        return [tr];
-      }
-      const details = document.createElement("tr");
-      details.className = "details";
-      const td = cell(diagnosis, "muted");
-      td.colSpan = 7;
-      details.append(td);
-      return [tr, details];
-    }).flat()
+    })
   );
   $("empty").hidden = status.accounts.length > 0;
-  $("notice").textContent = status.lastNotice || "None.";
+}
+
+function renderDiagnosis(status) {
+  const parts = [];
+  for (const account of status.accounts) {
+    const rows = problemRows(account);
+    if (!rows.length) {
+      continue;
+    }
+    if (status.accounts.length > 1) {
+      parts.push(Object.assign(document.createElement("h3"), { textContent: account.name }));
+    }
+    parts.push(table(["Problem", "Messages", "Meaning", "Details"], rows.map(r => [r[0], cell(r[1], "num"), r[2], r[3]])));
+    const examples = account.coverage?.examples ?? [];
+    if (examples.length) {
+      parts.push(Object.assign(document.createElement("h3"), { textContent: "Examples without folder" }));
+      parts.push(table(["Date", "From", "Subject"], examples.map(e => [day(e.date), e.author ?? "", e.subject])));
+    }
+  }
+  if (!parts.length) {
+    parts.push(Object.assign(document.createElement("p"), { className: "muted", textContent: "No problems found." }));
+  }
+  $("diagnosis").replaceChildren(...parts);
+}
+
+function checkState(c) {
+  if (!c) {
+    return "not run since Thunderbird started";
+  }
+  if (c.running) {
+    return `running, ${c.searched} of ${c.folders} folders searched`;
+  }
+  return `${c.auto ? "daily run" : "run"} done${c.error ? ` with errors: ${c.error}` : ""}`;
+}
+
+function renderServerCheck(status) {
+  const rows = status.accounts.map(({ name, lastServerCheck, serverCheck: c }) => [
+    name,
+    time(lastServerCheck) || "never",
+    checkState(c),
+    cell(c ? c.messages : "", "num"),
+    c ? c.repaired.join(", ") || "none" : "",
+    c ? c.rescanned.join(", ") || "none" : "",
+    c ? c.skipped.join(", ") : "",
+  ]);
+  $("serverCheck").replaceChildren(
+    ...(rows.length
+      ? [table(["Account", "Last check", "State", "Messages looked up", "Repaired", "Rescanned", "Skipped"], rows)]
+      : [])
+  );
+  $("checkServer").disabled = status.accounts.some(a => a.serverCheck?.running);
+}
+
+async function render() {
+  const status = await browser.allMailPlus.getStatus();
+  renderAccounts(status);
+  renderDiagnosis(status);
+  renderServerCheck(status);
+  $("notice").textContent = pageNotice || status.lastNotice || "None.";
+}
+
+let problems = [];
+let pageNotice = "";
+
+function renderProblems() {
+  const filter = $("problemFilter").value;
+  const shown = problems.filter(m => !filter || m.problem == filter);
+  $("problemCount").hidden = false;
+  $("problemCount").textContent = `${shown.length} of ${problems.length} messages.`;
+  const several = new Set(problems.map(m => m.account)).size > 1;
+  const headers = [...(several ? ["Account"] : []), "Date", "From", "Subject", "Problem", "Details"];
+  $("problems").replaceChildren(
+    table(
+      headers,
+      shown.map(m => [
+        ...(several ? [m.account] : []),
+        day(m.date),
+        m.author,
+        m.subject,
+        PROBLEMS[m.problem] ?? m.problem,
+        m.detail,
+      ])
+    )
+  );
+}
+
+async function showProblems() {
+  const accounts = await browser.allMailPlus.listProblems();
+  problems = accounts.flatMap(a => a.messages.map(m => ({ ...m, account: a.name })));
+  const kinds = [...new Set(problems.map(m => m.problem))];
+  $("problemFilter").replaceChildren(
+    new Option("All", ""),
+    ...kinds.map(kind => new Option(`${PROBLEMS[kind] ?? kind} (${problems.filter(m => m.problem == kind).length})`, kind))
+  );
+  $("problemFilterRow").hidden = false;
+  renderProblems();
+}
+
+async function listFolders() {
+  const accounts = await browser.allMailPlus.listServerFolders();
+  const rows = accounts.flatMap(a => a.folders.map(f => [a.name, f.path, f.subscribed ? "yes" : "no"]));
+  $("serverFolders").replaceChildren(
+    rows.length
+      ? table(["Account", "Server folder", "Subscribed"], rows)
+      : Object.assign(document.createElement("p"), {
+          className: "muted",
+          textContent: "Thunderbird has every folder that is on the server.",
+        })
+  );
 }
 
 async function run(button, action) {
   button.disabled = true;
   try {
     await action();
+  } catch (e) {
+    pageNotice = `${button.textContent} failed: ${e.message}`;
   } finally {
     button.disabled = false;
     render();
@@ -123,12 +248,18 @@ async function init() {
   const config = await browser.storage.local.get(DEFAULTS);
   $("syncOnStartup").checked = config.syncOnStartup;
   $("syncIntervalMinutes").value = config.syncIntervalMinutes;
+  $("dailyServerCheck").checked = config.dailyServerCheck;
   $("syncOnStartup").addEventListener("change", e => browser.storage.local.set({ syncOnStartup: e.target.checked }));
   $("syncIntervalMinutes").addEventListener("change", e =>
     browser.storage.local.set({ syncIntervalMinutes: Math.max(0, Number(e.target.value) || 0) })
   );
+  $("dailyServerCheck").addEventListener("change", e => browser.storage.local.set({ dailyServerCheck: e.target.checked }));
   $("sync").addEventListener("click", e => run(e.target, () => browser.allMailPlus.syncNow()));
   $("rebuild").addEventListener("click", e => run(e.target, () => browser.allMailPlus.rebuild()));
+  $("checkServer").addEventListener("click", e => run(e.target, () => browser.allMailPlus.checkServer()));
+  $("listFolders").addEventListener("click", e => run(e.target, listFolders));
+  $("showProblems").addEventListener("click", e => run(e.target, showProblems));
+  $("problemFilter").addEventListener("change", renderProblems);
   render();
   setInterval(render, 2000);
 }

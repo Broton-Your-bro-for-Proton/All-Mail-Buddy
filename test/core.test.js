@@ -161,3 +161,42 @@ test("re-adding the same key replaces the entry", () => {
   assert.equal(index.resolve({ id: "b@x", size: 1, date: 1 }).status, "unique");
   assert.deepEqual(index.stats(), { folders: 1, messages: 1 });
 });
+
+test("judges online search hits", () => {
+  const { hitVerdict } = require("../src/lib/core.js");
+  const searched = new Set(["a@x", "b@x"]);
+  assert.equal(hitVerdict(searched, "a@x"), "stale");
+  assert.equal(hitVerdict(searched, "other@y"), "broken");
+  // HEADER search matches substrings; a longer ID is not proof of a broken list.
+  assert.equal(hitVerdict(searched, "1a@x"), "");
+  // IMAP SEARCH ignores case.
+  assert.equal(hitVerdict(searched, "1A@X"), "");
+});
+
+test("the daily run repairs a folder at most once a week", () => {
+  const { mayRepair } = require("../src/lib/core.js");
+  const day = 24 * 60 * 60 * 1000;
+  assert.equal(mayRepair({ auto: true, repairedAt: undefined, now: 10 * day }), true);
+  assert.equal(mayRepair({ auto: true, repairedAt: 5 * day, now: 10 * day }), false);
+  assert.equal(mayRepair({ auto: true, repairedAt: 3 * day, now: 10 * day }), true);
+  assert.equal(mayRepair({ auto: false, repairedAt: 9 * day, now: 10 * day }), true);
+});
+
+test("lists server folders that Thunderbird does not have", () => {
+  const { missingFolders } = require("../src/lib/core.js");
+  assert.deepEqual(
+    missingFolders(["INBOX", "Folders/B", "Folders/A", "Labels/X"], ["INBOX", "Labels/X"]),
+    ["Folders/A", "Folders/B"]
+  );
+  assert.deepEqual(missingFolders(["INBOX"], ["INBOX", "Extra"]), []);
+});
+
+test("runs the server check at most daily and only when needed", () => {
+  const { serverCheckDue } = require("../src/lib/core.js");
+  const day = 24 * 60 * 60 * 1000;
+  const now = 10 * day;
+  assert.equal(serverCheckDue({ enabled: true, nofolder: 5, last: 0, now }), true);
+  assert.equal(serverCheckDue({ enabled: true, nofolder: 5, last: now - day + 1, now }), false);
+  assert.equal(serverCheckDue({ enabled: true, nofolder: 0, last: 0, now }), false);
+  assert.equal(serverCheckDue({ enabled: false, nofolder: 5, last: 0, now }), false);
+});
