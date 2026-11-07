@@ -681,7 +681,7 @@ try {
       throw new Error("filter: " + filtered.join(" | "));
     }
     doc.getElementById("listFolders").click();
-    await until(() => doc.getElementById("serverFolders").textContent.includes("every folder"), "server folder list");
+    await until(() => doc.getElementById("serverFolders").textContent.includes("no folder is hidden"), "server folder list");
     doc.getElementById("serverCheck").scrollIntoView();
     `
   );

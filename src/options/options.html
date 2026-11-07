@@ -69,6 +69,10 @@
         <button id="checkServer" class="btn btn-primary" type="button">Check server now</button>
         <button id="listFolders" class="btn btn-default" type="button">List server folders missing in Thunderbird</button>
       </div>
+      <p class="muted">
+        Thunderbird only shows subscribed folders. The list compares the server's full folder list with
+        Thunderbird's folders and shows each missing one with its subscription state.
+      </p>
       <div id="serverFolders" class="table-wrap"></div>
     </section>
 
@@ -89,8 +93,9 @@
     </section>
 
     <section class="panel">
-      <h2>Last notice</h2>
-      <p id="notice" class="muted">None.</p>
+      <h2>Last warning</h2>
+      <p class="muted">The last warning the add-on showed, for example when it refused an action.</p>
+      <p id="notice">None since Thunderbird started.</p>
     </section>
   </main>
   <script src="options.js"></script>

@@ -69,7 +69,7 @@ function problemRows(account) {
       PROBLEMS.nofolder,
       coverage.nofolder,
       "Only in All Mail, or in a folder whose local list is out of date. The server check tells them apart.",
-      "Actions file them into the target folder.",
+      "Delete, move, archive and junk still work: the add-on puts the message into the target folder, for delete into Trash.",
     ]);
   }
   if (unreadable?.length) {
@@ -179,7 +179,7 @@ async function render() {
   renderAccounts(status);
   renderDiagnosis(status);
   renderServerCheck(status);
-  $("notice").textContent = pageNotice || status.lastNotice || "None.";
+  $("notice").textContent = pageNotice || status.lastNotice || "None since Thunderbird started.";
 }
 
 let problems = [];
@@ -227,7 +227,8 @@ async function listFolders() {
       ? table(["Account", "Server folder", "Subscribed"], rows)
       : Object.assign(document.createElement("p"), {
           className: "muted",
-          textContent: "Thunderbird has every folder that is on the server.",
+          textContent:
+            "Every folder on the server also exists in Thunderbird, so no folder is hidden by a missing subscription.",
         })
   );
 }
