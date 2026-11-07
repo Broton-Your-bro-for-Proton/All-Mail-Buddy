@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const src = path.join(root, "src");
 const { version } = JSON.parse(fs.readFileSync(path.join(src, "manifest.json"), "utf8"));
-const out = path.join(root, "dist", `allmailplus-${version}.xpi`);
+const out = path.join(root, "dist", `allmail-buddy-${version}.xpi`);
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.rmSync(out, { force: true });

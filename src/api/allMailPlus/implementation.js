@@ -138,12 +138,12 @@ const controller = {
   },
 
   failed(error) {
-    console.error("All Mail+:", error);
+    console.error("All Mail Buddy:", error);
     this.notice(`The action failed: ${error.message}. Some messages may already have been changed.`);
   },
 
   notice(text) {
-    Services.console.logStringMessage(`All Mail+: ${text}`);
+    Services.console.logStringMessage(`All Mail Buddy: ${text}`);
     this.lastNotice = text;
     emitter.emit("notice", text);
   },
@@ -490,7 +490,7 @@ const controller = {
             await this.checkChanges(account);
           }
         } catch (e) {
-          console.error("All Mail+:", e);
+          console.error("All Mail Buddy:", e);
         } finally {
           this.scheduleCheck();
         }
@@ -654,7 +654,7 @@ const controller = {
       report.rescanned = [...stale].filter(f => !broken.has(f)).map(f => this.describe(f).name);
     } catch (e) {
       errors.push(String(e));
-      console.error("All Mail+:", e);
+      console.error("All Mail Buddy:", e);
     } finally {
       if (report.failed) {
         errors.unshift(`${report.failed} searches failed or timed out`);
@@ -716,7 +716,7 @@ const controller = {
         // No window: background searches should not report into the user's window.
         session.search(null);
       } catch (e) {
-        console.error("All Mail+: search failed in", folder.URI, e);
+        console.error("All Mail Buddy: search failed in", folder.URI, e);
         done(false);
       }
     });
@@ -1066,7 +1066,7 @@ const controller = {
       info.setCharProperty("columnStates", JSON.stringify(state));
       info.setCharProperty(INIT_PROPERTY, "1");
     } catch (e) {
-      console.warn("All Mail+: could not initialize columns", e);
+      console.warn("All Mail Buddy: could not initialize columns", e);
     }
   },
 

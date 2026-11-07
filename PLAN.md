@@ -1,4 +1,4 @@
-# All Mail+ for Thunderbird: feasibility and plan
+# All Mail Buddy: feasibility and plan
 
 Target: Thunderbird 153 with Proton Mail Bridge (IMAP). Goal: everything works
 inside Proton's "All Mail" folder. Each message shows its real location, and

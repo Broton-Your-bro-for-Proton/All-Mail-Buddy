@@ -1,6 +1,6 @@
-# All Mail+
+# All Mail Buddy
 
-Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
+Formerly "All Mail+". Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
 
 * shows the real folder of every message (cards view: a badge on the card,
   table view: the columns **Folder** and **Labels**, in German **Ordner** and
@@ -16,13 +16,13 @@ Status: test version, built and tested against Thunderbird 153.6.
 
 ## Install
 
-1. `npm run build` creates `dist/allmailplus-<version>.xpi`.
+1. `npm run build` creates `dist/allmail-buddy-<version>.xpi`.
 2. The add-on is not signed. Either load it temporarily via
    *Tools > Developer Tools > Debug Add-ons > Load Temporary Add-on* (pick
    `src/manifest.json`), or set `xpinstall.signatures.required` to `false` in the
    Config Editor and install the `.xpi` via *Add-ons and Themes > Install Add-on
    From File*.
-3. The settings page (*Add-ons and Themes > All Mail+ > Options*) shows the
+3. The settings page (*Add-ons and Themes > All Mail Buddy > Options*) shows the
    detected Bridge accounts, the index state and how many All Mail messages
    were matched.
 
