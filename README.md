@@ -43,15 +43,19 @@ Spam back to the Inbox.
 ## Development
 
 ```
-npm test           # unit tests (node:test)
-npm run test:e2e   # real Thunderbird via Marionette in a scratch profile
-npm run build      # package dist/*.xpi
+npm test                    # unit tests (node:test)
+npm run setup:thunderbird   # once: disposable Thunderbird in .cache/
+npm run test:e2e            # real Thunderbird via Marionette in a scratch profile
+npm run build               # package dist/*.xpi
 ```
 
-`test:e2e` starts `D:/Thunderbird/App/thunderbird/thunderbird.exe` by default.
-Pass another binary as the first argument or via `TB_BINARY`. It never touches
-the default profile. `E2E_SCREENSHOTS=<dir>` stores screenshots of the cards
-view, the table view and the settings page.
+`setup:thunderbird` downloads the official en-US Windows build of Thunderbird
+153.6.0esr from archive.mozilla.org (about 80 MB), checks it against Mozilla's
+SHA-512 sums and unpacks it into `.cache/thunderbird/` without installing it.
+`test:e2e` runs that copy with a throwaway profile, so it never starts or reads
+a Thunderbird that is installed on the machine. Another binary can be passed as
+the first argument or via `TB_BINARY`. `E2E_SCREENSHOTS=<dir>` stores
+screenshots of the cards view, the table view and the settings page.
 
 ## Manual check with a real Bridge account
 
