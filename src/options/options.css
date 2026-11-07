@@ -1,18 +1,18 @@
-/* Dark Calibre-Web look (caliBlur): dark grays with gold and amber accents. */
+/* Tokens of the Calibre AIO "Modern" theme (ha-cwa/theme/modern.css). */
 :root {
-  --page: #1f1f1f;
-  --panel: #282828;
-  --panel-border: rgba(255, 255, 255, 0.08);
-  --navbar: #191a1c;
-  --text: #eee;
-  --muted: hsla(0, 0%, 100%, 0.45);
-  --gold: #f9be03;
-  --gold-hover: #ffd34d;
-  --amber: #cc7b19;
-  --amber-hover: #e59029;
-  --on-gold: #191a1c;
-  --row-hover: hsla(0, 0%, 100%, 0.06);
-  --error: #ce3d2a;
+  --aio-bg: #0f1217;
+  --aio-sidebar: #14171c;
+  --aio-surface: #191e25;
+  --aio-line: #303842;
+  --aio-text: #f2f5f9;
+  --aio-muted: #b2bfce;
+  --aio-accent: #b49a64;
+  --aio-accent-hover: #dfd0a3;
+  --aio-accent-bg: #2b2419;
+  --aio-accent-line: #78643e;
+  --aio-hover-line: #697789;
+  --aio-row-hover: #282f39;
+  --aio-danger: #f1afba;
   color-scheme: dark;
 }
 
@@ -22,9 +22,9 @@
 
 body {
   margin: 0;
-  background: var(--page);
-  color: var(--text);
-  font: 14px/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--aio-bg);
+  color: var(--aio-text);
+  font: 13px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 .navbar {
@@ -32,18 +32,19 @@ body {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: var(--navbar);
-  border-bottom: 1px solid var(--panel-border);
+  background: var(--aio-sidebar);
+  border-bottom: 1px solid var(--aio-line);
 }
 
 .brand {
-  color: var(--gold);
-  font-size: 20px;
-  font-weight: 700;
+  color: var(--aio-accent);
+  font-size: 18px;
+  font-weight: 600;
 }
 
-.subtitle {
-  color: var(--muted);
+.subtitle,
+.muted {
+  color: var(--aio-muted);
 }
 
 main {
@@ -55,19 +56,14 @@ main {
 .panel {
   margin-bottom: 16px;
   padding: 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
+  background: var(--aio-surface);
+  border: 1px solid var(--aio-line);
+  border-radius: 6px;
 }
 
 h2 {
   margin: 0 0 8px;
-  font-size: 18px;
-  color: var(--gold);
-}
-
-.muted {
-  color: var(--muted);
+  font: 600 18px/1.4 "Segoe UI", system-ui, sans-serif;
 }
 
 .table-wrap {
@@ -81,8 +77,8 @@ table {
 
 th,
 td {
-  padding: 8px;
-  border-bottom: 1px solid var(--panel-border);
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--aio-line);
   text-align: left;
   white-space: nowrap;
 }
@@ -93,12 +89,12 @@ tr.details td {
 }
 
 th {
-  color: var(--muted);
+  color: var(--aio-muted);
   font-weight: 600;
 }
 
 tbody tr:hover {
-  background: var(--row-hover);
+  background: var(--aio-row-hover);
 }
 
 .num {
@@ -106,17 +102,17 @@ tbody tr:hover {
 }
 
 .state-ready {
-  color: var(--gold);
+  color: var(--aio-accent);
 }
 
 .state-indexing,
 .state-syncing,
 .state-pending {
-  color: var(--amber-hover);
+  color: var(--aio-muted);
 }
 
 .state-error {
-  color: var(--error);
+  color: var(--aio-danger);
 }
 
 .actions {
@@ -127,29 +123,35 @@ tbody tr:hover {
 }
 
 .btn {
-  padding: 6px 14px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  font: inherit;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--aio-line);
+  border-radius: 5px;
+  background: var(--aio-surface);
+  color: var(--aio-text);
+  font: 600 12px/1 "Segoe UI", system-ui, sans-serif;
   cursor: pointer;
 }
 
+.btn:hover {
+  border-color: var(--aio-hover-line);
+}
+
 .btn-primary {
-  background: var(--gold);
-  color: var(--on-gold);
+  background: var(--aio-accent-bg);
+  border-color: var(--aio-accent-line);
+  color: var(--aio-accent);
 }
 
 .btn-primary:hover {
-  background: var(--gold-hover);
+  border-color: var(--aio-accent);
+  color: var(--aio-accent-hover);
 }
 
-.btn-default {
-  background: var(--amber);
-  color: #fff;
-}
-
-.btn-default:hover {
-  background: var(--amber-hover);
+.btn:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--aio-accent);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -165,14 +167,15 @@ tbody tr:hover {
 }
 
 input[type="checkbox"] {
-  accent-color: var(--gold);
+  accent-color: var(--aio-accent);
 }
 
 input[type="number"] {
   width: 80px;
-  padding: 4px 6px;
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
-  background: var(--page);
-  color: var(--text);
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--aio-line);
+  border-radius: 5px;
+  background: var(--aio-bg);
+  color: var(--aio-text);
 }

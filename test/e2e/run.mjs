@@ -330,6 +330,7 @@ try {
     const { coverage } = status();
     if (coverage.reasons.size != 1) throw new Error("size reason: " + JSON.stringify(coverage));
     if (!Object.keys(coverage.sizeDeltas).every(d => Number(d) > 0)) throw new Error("size delta: " + JSON.stringify(coverage));
+    if (!coverage.examples.some(e => e.subject == "Orphan message")) throw new Error("examples: " + JSON.stringify(coverage.examples));
     `
   );
 

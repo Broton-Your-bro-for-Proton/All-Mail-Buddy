@@ -39,6 +39,10 @@ function diagnosisText(account) {
       lines.push(`Date of the closest copy is off by: ${topDeltas(coverage.dateDeltas, "s")}.`);
     }
   }
+  if (coverage?.examples?.length) {
+    const examples = coverage.examples.map(e => `"${e.subject}" (${new Date(e.date).toLocaleDateString()})`);
+    lines.push(`Examples without any copy, to look up in Proton: ${examples.join(", ")}.`);
+  }
   if (unreadable?.length) {
     lines.push(`Folders that could not be read: ${unreadable.join(", ")}.`);
   }

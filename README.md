@@ -39,7 +39,17 @@ copies disagree (two folders hold the message, or the only copy differs in size
 or date), one of those folders has not been synced since the message moved.
 The add-on then syncs exactly those folders again and re-checks, at most once
 every 10 minutes per folder, or after 30 seconds when you try an action on such
-a message. The status page lists why the remaining messages have no match.
+a message.
+
+Thunderbird itself only syncs an IMAP folder when it is opened. To catch
+changes made in other Proton clients, the add-on asks Bridge for the message
+count and next UID of every folder (IMAP STATUS) once a minute and whenever All
+Mail is opened, and syncs only the folders whose numbers changed or differ from
+the local copy.
+
+Copies of the same message may differ by up to 2 bytes in Thunderbird's stored
+size, which is tolerated. The status page lists why the remaining messages have
+no match and shows a few examples to look up in Proton.
 
 ## Junk
 

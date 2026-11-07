@@ -67,7 +67,7 @@ test("treats copies with another size or date as different messages", () => {
   const index = sampleIndex();
   assert.equal(index.resolve({ id: "self@x", size: 1, date: 1 }).status, "missing");
   // A single candidate is not enough: it must match size and date too.
-  assert.equal(index.resolve({ id: "a@x", size: 101, date: 5 }).status, "missing");
+  assert.equal(index.resolve({ id: "a@x", size: 110, date: 5 }).status, "missing");
   assert.equal(index.resolve({ id: "a@x", size: 100, date: 6 }).status, "missing");
   assert.deepEqual(index.resolve({ id: "b@x", size: 200, date: 7 }).labels, []);
 });
@@ -78,12 +78,12 @@ test("explains why a message has no match", () => {
   const reason = msg => index.resolve(msg).reason;
   assert.equal(reason({ id: "nope@x", size: 1, date: 1 }), "no-copy");
   assert.equal(reason({ id: "labelonly@x", size: 1, date: 1 }), "label-only");
-  assert.equal(reason({ id: "a@x", size: 99, date: 5 }), "size");
+  assert.equal(reason({ id: "a@x", size: 90, date: 5 }), "size");
   assert.equal(reason({ id: "a@x", size: 100, date: 9 }), "date");
-  assert.equal(reason({ id: "a@x", size: 99, date: 9 }), "size-date");
+  assert.equal(reason({ id: "a@x", size: 90, date: 9 }), "size-date");
   assert.equal(reason({ id: "a@x", size: 100, date: 5 }), "");
   assert.deepEqual(
-    index.resolve({ id: "a@x", size: 99, date: 5 }).candidates.map(c => c.uri),
+    index.resolve({ id: "a@x", size: 90, date: 5 }).candidates.map(c => c.uri),
     ["inbox"]
   );
 });
@@ -93,8 +93,24 @@ test("names folders that may be out of date", () => {
   const { staleUris } = require("../src/lib/core.js");
   assert.deepEqual(staleUris(index.resolve({ id: "b@x", size: 200, date: 6 })), []);
   assert.deepEqual(staleUris(index.resolve({ id: "twin@x", size: 400, date: 8 })).sort(), ["inbox2", "sent"]);
-  assert.deepEqual(staleUris(index.resolve({ id: "a@x", size: 99, date: 5 })), ["inbox"]);
+  assert.deepEqual(staleUris(index.resolve({ id: "a@x", size: 90, date: 5 })), ["inbox"]);
   assert.deepEqual(staleUris(index.resolve({ id: "nope@x", size: 1, date: 1 })), []);
+});
+
+test("tolerates the 2 byte size difference Thunderbird introduces", () => {
+  const index = sampleIndex();
+  assert.equal(index.resolve({ id: "a@x", size: 102, date: 5 }).status, "unique");
+  assert.equal(index.resolve({ id: "a@x", size: 98, date: 5 }).status, "unique");
+  assert.equal(index.resolve({ id: "a@x", size: 103, date: 5 }).reason, "size");
+});
+
+test("decides which folders need a sync after STATUS", () => {
+  const { needsSync } = require("../src/lib/core.js");
+  assert.equal(needsSync({ previous: null, total: 5, nextUid: 9, localCount: 5 }), false);
+  assert.equal(needsSync({ previous: null, total: 6, nextUid: 9, localCount: 5 }), true);
+  assert.equal(needsSync({ previous: "5/9", total: 5, nextUid: 9, localCount: 1 }), false);
+  assert.equal(needsSync({ previous: "5/9", total: 5, nextUid: 10, localCount: 5 }), true);
+  assert.equal(needsSync({ previous: "5/9", total: 4, nextUid: 9, localCount: 5 }), true);
 });
 
 test("reports missing messages", () => {

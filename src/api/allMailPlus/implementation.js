@@ -31,6 +31,7 @@ const FORWARDED_COMMANDS = new Set([
 
 const RESOURCE_HOST = "allmailplus";
 const STATUS_TOPIC = "allmailplus-status";
+const CHECK_SECONDS = 60;
 const resourceHandler = () =>
   Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler);
 
@@ -51,6 +52,8 @@ const controller = {
   pendingSync: false,
   refreshedAt: new Map(), // folder uri -> time of the last targeted sync
   syncTimer: null,
+  checkTimer: null,
+  statusSeen: new Map(), // folder uri -> "MESSAGES/UIDNEXT" from the last STATUS check
   lastNotice: "",
 
   // ---- lifecycle -------------------------------------------------------
@@ -81,6 +84,7 @@ const controller = {
     this.hookExistingWindows();
     this.rebuild(this.config.syncOnStartup);
     this.scheduleSync();
+    this.scheduleCheck();
     return this.status();
   },
 
@@ -105,6 +109,8 @@ const controller = {
     this.dirty.clear();
     this.refreshedAt.clear();
     clearTimeout(this.syncTimer);
+    clearTimeout(this.checkTimer);
+    this.statusSeen.clear();
     resourceHandler().setSubstitution(RESOURCE_HOST, null);
     ThreadPaneColumns.removeCustomColumn(LOCATION_COLUMN);
     ThreadPaneColumns.removeCustomColumn(LABELS_COLUMN);
@@ -310,7 +316,15 @@ const controller = {
    * and how far size (bytes) and date (seconds) are off from the closest copy.
    */
   async updateCoverage(account) {
-    const coverage = { unique: 0, ambiguous: 0, missing: 0, reasons: {}, sizeDeltas: {}, dateDeltas: {} };
+    const coverage = {
+      unique: 0,
+      ambiguous: 0,
+      missing: 0,
+      reasons: {},
+      sizeDeltas: {},
+      dateDeltas: {},
+      examples: [], // a few messages without any real copy, to look them up in Proton
+    };
     const count = (map, key) => (map[key] = (map[key] ?? 0) + 1);
     const stale = new Set();
     try {
@@ -320,12 +334,16 @@ const controller = {
         if (i % 2000 == 1999) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
-        const entry = this.entryOf(db.getMsgHdrForKey(keys[i]));
+        const hdr = db.getMsgHdrForKey(keys[i]);
+        const entry = this.entryOf(hdr);
         const result = account.index.resolve(entry);
         coverage[result.status]++;
         core.staleUris(result).forEach(uri => stale.add(uri));
         if (result.reason) {
           count(coverage.reasons, result.reason);
+          if (result.reason == "no-copy" && coverage.examples.length < 5) {
+            coverage.examples.push({ subject: hdr.mime2DecodedSubject, date: hdr.date / 1000 });
+          }
           const [closest] = result.candidates;
           if (closest && closest.size != entry.size) {
             count(coverage.sizeDeltas, closest.size - entry.size);
@@ -359,6 +377,68 @@ const controller = {
       }
     }
     if (due.length) {
+      this.coverageLater(account);
+      this.refreshColumns();
+    }
+  },
+
+  // ---- change detection ------------------------------------------------------
+
+  /**
+   * Thunderbird only syncs an IMAP folder when it is opened, so changes made in
+   * other Proton clients leave its local list stale. A cheap STATUS per folder
+   * shows which folders changed on the server; only those are synced.
+   */
+  scheduleCheck() {
+    clearTimeout(this.checkTimer);
+    if (this.started) {
+      this.checkTimer = setTimeout(async () => {
+        try {
+          for (const account of [...this.accounts.values()]) {
+            await this.checkChanges(account);
+          }
+        } catch (e) {
+          console.error("All Mail+:", e);
+        } finally {
+          this.scheduleCheck();
+        }
+      }, CHECK_SECONDS * 1000);
+    }
+  },
+
+  async checkChanges(account) {
+    if (account.server.type != "imap" || account.state != "ready" || account.checking) {
+      return;
+    }
+    account.checking = true;
+    try {
+      await this.syncChangedFolders(account);
+    } finally {
+      account.checking = false;
+    }
+  },
+
+  async syncChangedFolders(account) {
+    const changed = [];
+    for (const folder of [...this.trackedFolders(account), account.allMail]) {
+      const imap = folder.QueryInterface(Ci.nsIMsgImapMailFolder);
+      await this.urlDone(listener => imap.updateStatus(listener, null), 15000);
+      const status = { total: imap.serverTotal, nextUid: imap.serverNextUID };
+      const seen = `${status.total}/${status.nextUid}`;
+      const previous = this.statusSeen.get(folder.URI) ?? null;
+      this.statusSeen.set(folder.URI, seen);
+      if (core.needsSync({ previous, ...status, localCount: folder.getTotalMessages(false) })) {
+        changed.push(folder);
+      }
+    }
+    for (const folder of changed) {
+      await this.updateFolder(folder);
+      if (folder != account.allMail) {
+        await this.scanFolder(account, folder);
+        this.refreshedAt.set(folder.URI, Date.now());
+      }
+    }
+    if (changed.length) {
       this.coverageLater(account);
       this.refreshColumns();
     }
@@ -411,14 +491,19 @@ const controller = {
   },
 
   updateFolder(folder) {
+    return this.urlDone(listener => folder.updateFolderWithListener(null, listener), 60000);
+  },
+
+  /** Runs an IMAP operation that reports through an nsIUrlListener, with a timeout. */
+  urlDone(start, timeout) {
     return new Promise(resolve => {
-      const timer = setTimeout(resolve, 60000);
+      const timer = setTimeout(resolve, timeout);
       const done = () => {
         clearTimeout(timer);
         resolve();
       };
       try {
-        folder.updateFolderWithListener(null, {
+        start({
           QueryInterface: ChromeUtils.generateQI(["nsIUrlListener"]),
           OnStartRunningUrl() {},
           OnStopRunningUrl: done,
@@ -473,7 +558,10 @@ const controller = {
         return;
       }
       if (controller.isAllMail(folder)) {
-        controller.coverageLater(controller.accountFor(folder));
+        const account = controller.accountFor(folder);
+        controller.coverageLater(account);
+        // Opening All Mail is a good moment to look for changes made elsewhere.
+        controller.debounce(`check:${account.key}`, 2000, () => controller.checkChanges(account).catch(console.error));
         controller.refreshColumns();
       } else {
         controller.rescanLater(folder);
@@ -568,7 +656,7 @@ const controller = {
       badge.className = "allmailplus-badge";
       badge.style.cssText =
         "margin-inline-end: 6px; padding: 0 5px; border: 1px solid currentColor; border-radius: 3px;" +
-        "color: light-dark(#9a6a00, #f9be03); font-size: 0.85em; white-space: nowrap; overflow: hidden;" +
+        "color: light-dark(#78643e, #b49a64); font-size: 0.85em; white-space: nowrap; overflow: hidden;" +
         "text-overflow: ellipsis;";
       card.querySelector(".thread-card-dynamic-row")?.prepend(badge);
     }
@@ -820,7 +908,7 @@ const controller = {
       const real = folder.msgDatabase.getMsgHdrForKey(key);
       if (
         real.messageId == entry.id &&
-        real.messageSize == entry.size &&
+        core.sameSize(real.messageSize, entry.size) &&
         real.date == entry.date &&
         !(real.flags & Ci.nsMsgMessageFlags.IMAPDeleted)
       ) {
