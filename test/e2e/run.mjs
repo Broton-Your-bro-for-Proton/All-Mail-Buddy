@@ -1,5 +1,7 @@
 // End-to-end test in a real Thunderbird 153 with a scratch profile, driven by Marionette.
 // The profile simulates the Proton Mail Bridge folder layout on Local Folders.
+// By default it runs the disposable copy from `npm run setup:thunderbird`, never
+// an installed Thunderbird.
 //
 // Usage: node test/e2e/run.mjs [path/to/thunderbird.exe]
 // Env:   TB_BINARY, E2E_KEEP_PROFILE=1, E2E_SCREENSHOTS=<dir>
@@ -10,9 +12,14 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { binaryFor } from "../../scripts/fetch-thunderbird.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const binary = process.argv[2] ?? process.env.TB_BINARY ?? "D:/Thunderbird/App/thunderbird/thunderbird.exe";
+const binary = process.argv[2] ?? process.env.TB_BINARY ?? binaryFor();
+if (!fs.existsSync(binary)) {
+  console.error(`Thunderbird not found at ${binary}. Run "npm run setup:thunderbird" first.`);
+  process.exit(1);
+}
 const port = 2829;
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "allmailplus-e2e-"));
 const shots = process.env.E2E_SCREENSHOTS;
@@ -254,7 +261,10 @@ async function screenshot(client, name) {
   fs.writeFileSync(path.join(shots, `${name}.png`), Buffer.from(value, "base64"));
 }
 
-const tb = spawn(binary, ["-profile", profile, "-no-remote", "-marionette", "-remote-allow-system-access"], { stdio: "ignore" });
+const tb = spawn(binary, ["-profile", profile, "-no-remote", "-marionette", "-remote-allow-system-access"], {
+  stdio: "ignore",
+  env: { ...process.env, MOZ_CRASHREPORTER_DISABLE: "1" },
+});
 let client;
 try {
   client = await connect();
