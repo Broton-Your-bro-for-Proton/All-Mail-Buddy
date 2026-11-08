@@ -33,7 +33,6 @@ const FORWARDED_COMMANDS = new Set([
 
 const RESOURCE_HOST = "allmailplus";
 const STATUS_TOPIC = "allmailplus-status";
-const CHECK_SECONDS = 60;
 const SEARCH_CHUNK = 100; // Message-IDs per IMAP SEARCH
 const REPAIR_LIMIT = 25; // folders per click on "Repair folders"
 const MAX_SEARCH_IDS = 500; // Message-IDs per server check run
@@ -53,7 +52,7 @@ const controller = {
   started: false,
   config: {
     syncOnStartup: true,
-    syncIntervalMinutes: 0,
+    checkIntervalMinutes: 5,
     dailyServerCheck: true,
     verifyOnServer: true,
     disabledAccounts: [],
@@ -66,7 +65,6 @@ const controller = {
   dirty: new Set(), // folder uris that changed during their snapshot
   pendingSync: false,
   refreshedAt: new Map(), // folder uri -> time of the last targeted sync
-  syncTimer: null,
   checkTimer: null,
   statusSeen: new Map(), // folder uri -> "MESSAGES/UIDNEXT" from the last STATUS check
   loadWaiters: new Map(), // folder uri -> callback for its next FolderLoaded
@@ -106,7 +104,6 @@ const controller = {
     Services.obs.addObserver(this, STATUS_TOPIC);
     this.hookExistingWindows();
     this.rebuild(this.config.syncOnStartup);
-    this.scheduleSync();
     this.scheduleCheck();
     return this.status();
   },
@@ -133,7 +130,6 @@ const controller = {
     this.scanning.clear();
     this.dirty.clear();
     this.refreshedAt.clear();
-    clearTimeout(this.syncTimer);
     clearTimeout(this.checkTimer);
     this.statusSeen.clear();
     for (const done of [...this.loadWaiters.values()]) {
@@ -153,7 +149,7 @@ const controller = {
     if (JSON.stringify(this.config.disabledAccounts) != before) {
       this.rebuild(false);
     }
-    this.scheduleSync();
+    this.scheduleCheck();
     return this.status();
   },
 
@@ -567,7 +563,7 @@ const controller = {
         } finally {
           this.scheduleCheck();
         }
-      }, CHECK_SECONDS * 1000);
+      }, Math.min(60, Math.max(1, Number(this.config.checkIntervalMinutes) || 5)) * 60000);
     }
   },
 
@@ -980,20 +976,6 @@ const controller = {
   },
 
   // ---- syncing -------------------------------------------------------------
-
-  scheduleSync() {
-    clearTimeout(this.syncTimer);
-    const minutes = Number(this.config.syncIntervalMinutes);
-    if (this.started && minutes > 0) {
-      this.syncTimer = setTimeout(async () => {
-        try {
-          await this.syncAll();
-        } finally {
-          this.scheduleSync();
-        }
-      }, minutes * 60000);
-    }
-  },
 
   async syncAll() {
     for (const account of [...this.accounts.values()]) {

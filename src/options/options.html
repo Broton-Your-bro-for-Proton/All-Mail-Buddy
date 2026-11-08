@@ -38,6 +38,12 @@
         <button id="sync" class="btn btn-primary" type="button">Sync all folders now</button>
         <button id="rebuild" class="btn btn-default" type="button">Rebuild index</button>
       </div>
+      <p class="muted">
+        Normally neither is needed: the add-on asks the server every few minutes which folders changed and loads only
+        those. "Sync all folders now" loads every Bridge folder from the server once; use it after Thunderbird was
+        offline for a long time, or when the Folder column looks wrong for many messages. "Rebuild index" only rereads
+        Thunderbird's local folders, without asking the server.
+      </p>
     </section>
 
     <section class="panel">
@@ -89,8 +95,8 @@
         <span>Sync all Bridge folders when Thunderbird starts</span>
       </label>
       <label class="row">
-        <span>Full sync of all Bridge folders every so many minutes (0 turns it off; changes are found without it)</span>
-        <input id="syncIntervalMinutes" type="number" min="0" max="1440" step="1">
+        <span>Look for changes made in other apps every so many minutes (1 to 60)</span>
+        <input id="checkIntervalMinutes" type="number" min="1" max="60" step="1">
       </label>
       <label class="row">
         <input id="verifyOnServer" type="checkbox">

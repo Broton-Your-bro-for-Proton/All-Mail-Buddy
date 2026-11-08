@@ -2,7 +2,7 @@
 
 const DEFAULTS = {
   syncOnStartup: true,
-  syncIntervalMinutes: 0,
+  checkIntervalMinutes: 5,
   dailyServerCheck: true,
   verifyOnServer: true,
   disabledAccounts: [],
@@ -411,14 +411,16 @@ async function run(button, action) {
 async function init() {
   const config = await browser.storage.local.get(DEFAULTS);
   $("syncOnStartup").checked = config.syncOnStartup;
-  $("syncIntervalMinutes").value = config.syncIntervalMinutes;
+  $("checkIntervalMinutes").value = config.checkIntervalMinutes;
   $("dailyServerCheck").checked = config.dailyServerCheck;
   $("verifyOnServer").checked = config.verifyOnServer;
   $("verifyOnServer").addEventListener("change", e => browser.storage.local.set({ verifyOnServer: e.target.checked }));
   $("syncOnStartup").addEventListener("change", e => browser.storage.local.set({ syncOnStartup: e.target.checked }));
-  $("syncIntervalMinutes").addEventListener("change", e =>
-    browser.storage.local.set({ syncIntervalMinutes: Math.max(0, Number(e.target.value) || 0) })
-  );
+  $("checkIntervalMinutes").addEventListener("change", e => {
+    const minutes = Math.min(60, Math.max(1, Math.round(Number(e.target.value)) || 5));
+    e.target.value = minutes;
+    browser.storage.local.set({ checkIntervalMinutes: minutes });
+  });
   $("dailyServerCheck").addEventListener("change", e => browser.storage.local.set({ dailyServerCheck: e.target.checked }));
   $("sync").addEventListener("click", e => run(e.target, () => browser.allMailPlus.syncNow()));
   $("rebuild").addEventListener("click", e => run(e.target, () => browser.allMailPlus.rebuild()));

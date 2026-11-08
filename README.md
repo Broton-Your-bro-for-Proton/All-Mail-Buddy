@@ -44,9 +44,15 @@ a message.
 Thunderbird does not keep every IMAP folder up to date by itself, mostly only
 the open one and those it checks for new mail. To catch changes made in other
 Proton clients, the add-on asks Bridge for the message
-count and next UID of every folder (IMAP STATUS) once a minute and whenever All
+count and next UID of every folder (IMAP STATUS) every 5 minutes (adjustable
+from 1 to 60) and whenever All
 Mail is opened, and syncs only the folders whose numbers changed or differ from
 the local copy.
+These checks are tiny: Bridge runs on the same machine and answers each STATUS
+from its own database. There is no periodic full sync; all folders are synced
+once when Thunderbird starts (can be turned off), and *Sync all folders now*
+on the settings page does it on demand, for example after Thunderbird was
+offline for a long time.
 
 Copies of the same message may differ by up to 2 bytes in Thunderbird's stored
 size, which is tolerated. The status page lists why the remaining messages have
