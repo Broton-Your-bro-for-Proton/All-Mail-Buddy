@@ -181,6 +181,14 @@ test("a click repairs the same folder at most once a day", () => {
   assert.equal(repairedRecently(9 * day, 10 * day), false);
 });
 
+test("a folder whose copies still differ after a repair is left alone for 30 days", () => {
+  const { knownUnfixable } = require("../src/lib/core.js");
+  const day = 24 * 60 * 60 * 1000;
+  assert.equal(knownUnfixable(undefined, 100 * day), false);
+  assert.equal(knownUnfixable(80 * day, 100 * day), true);
+  assert.equal(knownUnfixable(70 * day, 100 * day), false);
+});
+
 test("the daily run repairs a folder at most once a week", () => {
   const { mayRepair } = require("../src/lib/core.js");
   const day = 24 * 60 * 60 * 1000;

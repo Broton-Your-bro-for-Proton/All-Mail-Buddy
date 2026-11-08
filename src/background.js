@@ -1,6 +1,12 @@
 "use strict";
 
-const DEFAULTS = { syncOnStartup: true, syncIntervalMinutes: 15, dailyServerCheck: true, disabledAccounts: [] };
+const DEFAULTS = {
+  syncOnStartup: true,
+  syncIntervalMinutes: 0,
+  dailyServerCheck: true,
+  verifyOnServer: true,
+  disabledAccounts: [],
+};
 
 const columnNames = {
   folder: browser.i18n.getMessage("columnFolder"),

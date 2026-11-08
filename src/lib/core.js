@@ -227,6 +227,11 @@ var AllMailCore = (() => {
     return !!repairedAt && now - repairedAt < DAY;
   }
 
+  /** A folder whose differing copies survived a repair is not offered again for 30 days. */
+  function knownUnfixable(markedAt, now) {
+    return !!markedAt && now - markedAt < 30 * DAY;
+  }
+
   /** The daily run repairs a folder at most once a week; a click always may. */
   function mayRepair({ auto, repairedAt, now }) {
     return !auto || !repairedAt || now - repairedAt >= 7 * DAY;
@@ -235,6 +240,7 @@ var AllMailCore = (() => {
   return {
     mayRepair,
     repairedRecently,
+    knownUnfixable,
     isBridgeRoot,
     classify,
     LocationIndex,

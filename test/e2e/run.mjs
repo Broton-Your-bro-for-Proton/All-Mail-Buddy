@@ -115,6 +115,7 @@ const layout = {
   Sent: [M.twin],
   Spam: [M.restore],
   Trash: [],
+  Archive: [],
   Folders: [],
   "Folders.sbd/Finanzen": [M.invoice, M.row],
   "Folders.sbd/Shops": [M.order, M.copy],
@@ -247,6 +248,11 @@ const helpers = `
   const ifolder = p => { try { return p.split("/").reduce((f, name) => f.getChildNamed(name), imapRoot()); } catch { return null; } };
   const ihdr = (p, id) => { try { return ifolder(p).msgDatabase.getMsgHdrForMessageID(id + "@imap"); } catch { return null; } };
   const icell = id => ThreadPaneColumns.getColumn("allMailPlusLocation").handler.getCellText(ihdr("All Mail", id));
+  const amNotice = () => {
+    const o = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
+    Services.obs.notifyObservers(o, "allmailplus-status");
+    return JSON.parse(o.data).lastNotice;
+  };
   const amStatus = name => {
     const o = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
     Services.obs.notifyObservers(o, "allmailplus-status");
@@ -448,6 +454,31 @@ try {
   );
 
   await check(
+    "The row delete button asks first when the real copy is already in Trash",
+    client,
+    `
+    const { MailUtils } = ChromeUtils.importESModule("resource:///modules/MailUtils.sys.mjs");
+    const original = MailUtils.confirmDelete;
+    let asked = null;
+    MailUtils.confirmDelete = (permanent, view, f) => {
+      asked = f;
+      return false;
+    };
+    try {
+      const win = await show("All Mail");
+      const index = win.gDBView.findIndexOfMsgHdr(hdr("All Mail", "hello"), true);
+      win.threadPane.treeTable.dispatchEvent(new win.CustomEvent("request-delete", { bubbles: true, detail: { index } }));
+      await until(() => asked, "confirmation asked");
+      if (!asked.isSpecialFolder(Ci.nsMsgFolderFlags.Trash, true)) throw new Error("asked for " + asked.name);
+      await sleep(500);
+      if (!has("Trash", "hello")) throw new Error("deleted without confirmation");
+    } finally {
+      MailUtils.confirmDelete = original;
+    }
+    `
+  );
+
+  await check(
     "Move in All Mail moves the real message, Undo restores it",
     client,
     `
@@ -461,12 +492,12 @@ try {
   );
 
   await check(
-    "Copy in All Mail copies from the real folder",
+    "Copy within the account moves the real message, as Proton keeps one folder per message",
     client,
     `
     const win = await select("copy");
     win.commandController.doCommand("cmd_copyMessage", folder("Folders/Finanzen"));
-    await until(() => has("Folders/Finanzen", "copy") && has("Folders/Shops", "copy"), "copied");
+    await until(() => has("Folders/Finanzen", "copy") && !has("Folders/Shops", "copy"), "moved");
     `
   );
 
@@ -487,7 +518,7 @@ try {
     `
     const win = await select("meeting");
     win.commandController.doCommand("cmd_archive");
-    await until(() => !has("Inbox", "meeting") && has("Archives", "meeting"), "archived");
+    await until(() => !has("Inbox", "meeting") && has("Archive", "meeting"), "archived into the Archive folder");
     `
   );
 
@@ -608,7 +639,8 @@ try {
     `
     const win = await select("twin");
     win.commandController.doCommand("cmd_deleteMessage");
-    await sleep(1500);
+    // The refusal is decided before anything is sent.
+    await until(() => amNotice().startsWith("1 of 1 selected messages could not be matched"), "refusal notice");
     if (!has("Inbox", "twin") || !has("Sent", "twin") || has("Trash", "twin") || !has("All Mail", "twin")) {
       throw new Error("ambiguous message was changed");
     }
@@ -631,7 +663,7 @@ try {
     await until(() => has("Folders/Shops", "orphanmove"), "orphan copied to Shops");
     win = await select("orphanarchive");
     win.commandController.doCommand("cmd_archive");
-    await until(() => has("Archives", "orphanarchive"), "orphan copied to Archives");
+    await until(() => has("Archive", "orphanarchive"), "orphan copied to Archive");
     for (const id of ["orphan", "orphanmove", "orphanarchive"]) {
       if (!has("All Mail", id)) throw new Error("All Mail entry was removed: " + id);
     }
@@ -1018,6 +1050,54 @@ try {
       const ids = [...ifolder("Folders/Shops").messages].map(h => h.messageKey + ":" + h.messageId + ":" + h.flags);
       throw new Error(e.message + ", got " + icell("fresh") + " shops=" + ids.join(",") + " report=" + JSON.stringify(report));
     });
+    `
+  );
+
+  await check(
+    "IMAP: delete checks the message on the server, then moves the real copy to Trash",
+    client,
+    `
+    const t = window.allMailPlusTest;
+    Services.prefs.setStringPref("extensions.allmailplus.serverCheck",
+      JSON.stringify({ last: { [imapRoot().server.key]: Date.now() }, repaired: {}, unfixable: {} }));
+    await until(() => icell("bill") == "Finanzen", "bill resolves", 30000);
+    const win = await showImap("All Mail");
+    const index = win.gDBView.findIndexOfMsgHdr(ihdr("All Mail", "bill"), true);
+    win.threadTree.selectedIndex = index;
+    await until(() => win.gDBView.hdrForFirstSelectedMessage?.messageId == "bill@imap", "select bill");
+    const searches = t.searches;
+    win.commandController.doCommand("cmd_deleteMessage");
+    // A second press while the server is checked must not act twice.
+    win.commandController.doCommand("cmd_deleteMessage");
+    if (!amNotice().includes("still being checked")) throw new Error("second press: " + amNotice());
+    const inBox = (box, id) => t.daemon.getMailbox(box)._messages.some(m => t.idOf(m) == id + "@imap" && !m.flags.includes("\\\\Deleted"));
+    await until(() => inBox("Trash", "bill") && !inBox("Folders/Finanzen", "bill"), "bill in Trash on the server", 30000);
+    if (t.searches == searches) throw new Error("the message was not checked on the server first");
+    await sleep(1000);
+    const copies = t.daemon.getMailbox("Trash")._messages.filter(m => t.idOf(m) == "bill@imap").length;
+    if (copies != 1) throw new Error(copies + " copies in Trash");
+    `
+  );
+
+  await check(
+    "IMAP: an action is refused when the server holds another message under that number",
+    client,
+    `
+    const t = window.allMailPlusTest;
+    await until(() => icell("shop") == "Shops", "shop resolves", 30000);
+    // Bridge put another message under the UID Thunderbird has for "shop".
+    const shops = t.daemon.getMailbox("Folders/Shops");
+    const index = shops._messages.findIndex(m => t.idOf(m) == "shop@imap");
+    shops._messages[index] = new t.ImapMessage(t.uri(t.literal("other", "Other message")), shops._messages[index].uid, []);
+    const win = await showImap("All Mail");
+    win.threadTree.selectedIndex = win.gDBView.findIndexOfMsgHdr(ihdr("All Mail", "shop"), true);
+    await until(() => win.gDBView.hdrForFirstSelectedMessage?.messageId == "shop@imap", "select shop");
+    win.commandController.doCommand("cmd_moveMessage", ifolder("Folders/Finanzen"));
+    await until(() => amNotice().includes("changed on the server since Thunderbird last loaded it"), "refusal notice", 30000).catch(e => {
+      throw new Error(e.message + ": " + amNotice());
+    });
+    const inBox = (box, id) => t.daemon.getMailbox(box)._messages.some(m => t.idOf(m) == id + "@imap" && !m.flags.includes("\\\\Deleted"));
+    if (!inBox("Folders/Shops", "other") || inBox("Folders/Finanzen", "other")) throw new Error("the other message was moved");
     `
   );
 
