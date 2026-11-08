@@ -2,7 +2,7 @@
 
 const DEFAULTS = {
   syncOnStartup: true,
-  syncIntervalMinutes: 0,
+  checkIntervalMinutes: 5,
   dailyServerCheck: true,
   verifyOnServer: true,
   disabledAccounts: [],
