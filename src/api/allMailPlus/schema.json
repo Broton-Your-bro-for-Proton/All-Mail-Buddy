@@ -21,6 +21,8 @@
       { "name": "listServerFolders", "type": "function", "async": true, "parameters": [] },
       { "name": "listProblems", "type": "function", "async": true, "parameters": [] },
       { "name": "openNoFolderSearch", "type": "function", "async": true, "parameters": [] },
+      { "name": "getDiagnostics", "type": "function", "async": true, "parameters": [] },
+      { "name": "clearDiagnostics", "type": "function", "async": true, "parameters": [] },
       {
         "name": "repairDifferingFolders",
         "type": "function",
