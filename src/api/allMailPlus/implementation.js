@@ -336,7 +336,7 @@ const controller = {
     this.scanning.add(folder.URI);
     const entries = [];
     for (let i = 0; i < keys.length; i++) {
-      if (i % 2000 == 1999) {
+      if (i % 500 == 499) {
         await new Promise(resolve => setTimeout(resolve, 0));
       }
       let hdr;
@@ -435,7 +435,7 @@ const controller = {
       const db = account.allMail.msgDatabase;
       const keys = db.listAllKeys();
       for (let i = 0; i < keys.length; i++) {
-        if (i % 2000 == 1999) {
+        if (i % 500 == 499) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
         const hdr = db.getMsgHdrForKey(keys[i]);
@@ -513,7 +513,7 @@ const controller = {
     const signed = n => `${n > 0 ? "+" : ""}${n}`;
     const keys = db.listAllKeys();
     for (let i = 0; i < keys.length; i++) {
-      if (i % 2000 == 1999) {
+      if (i % 500 == 499) {
         await new Promise(resolve => setTimeout(resolve, 0));
       }
       const hdr = db.getMsgHdrForKey(keys[i]);
@@ -1828,7 +1828,7 @@ const controller = {
     const msgWindow = win.top.msgWindow;
     const allMailHdrs = hdrs.filter(hdr => this.isAllMail(hdr.folder));
     const touched = new Set(groups.keys());
-    const done = () => this.afterAction(touched, allMailHdrs);
+    const done = () => this.afterAction(touched);
     const listener = this.copyListener(done);
     let moved = true;
 
@@ -2007,13 +2007,15 @@ const controller = {
     };
   },
 
-  afterAction(folders, allMailHdrs) {
+  afterAction(folders) {
     for (const folder of folders) {
       this.rescanLater(folder);
     }
     // IMAP copies report no new headers, so fetch them to update the columns
-    // soon. Loading a folder rescans it.
-    for (const folder of [...folders, ...this.byFolder(allMailHdrs).keys()]) {
+    // soon. Loading a folder rescans it. All Mail is not synced here: with tens
+    // of thousands of messages that would stall Thunderbird after every action,
+    // and the change check picks up its changes.
+    for (const folder of folders) {
       if (folder.server.type == "imap") {
         this.debounce(`update:${folder.URI}`, 1500, () => this.updateFolder(folder));
       }
