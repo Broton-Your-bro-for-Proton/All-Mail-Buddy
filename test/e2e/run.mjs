@@ -549,6 +549,34 @@ try {
   );
 
   await check(
+    "A saved search with the Folder criterion lists the messages without a folder",
+    client,
+    `
+    const { VirtualFolderHelper } = ChromeUtils.importESModule("resource:///modules/VirtualFolderWrapper.sys.mjs");
+    const custom = MailServices.filters.getCustomTerm("allmailplus@hypercrisis#location");
+    if (!custom) throw new Error("search term is not registered");
+    const session = Cc["@mozilla.org/messenger/searchSession;1"].createInstance(Ci.nsIMsgSearchSession);
+    const term = session.createTerm();
+    const value = term.value;
+    value.attrib = Ci.nsMsgSearchAttrib.Custom;
+    value.str = "nofolder";
+    term.attrib = Ci.nsMsgSearchAttrib.Custom;
+    term.customId = custom.id;
+    term.op = Ci.nsMsgSearchOp.Is;
+    term.value = value;
+    term.booleanAnd = true;
+    const saved = VirtualFolderHelper.createNewVirtualFolder("Test no folder", root(), [folder("All Mail")], [term], false).virtualFolder;
+    const win = pane();
+    win.displayFolder(saved);
+    await until(() => win.gFolder?.URI == saved.URI && win.gDBView?.rowCount == 3, "three messages").catch(e => {
+      throw new Error(e.message + ", rows " + win.gDBView?.rowCount);
+    });
+    const subjects = Array.from({ length: 3 }, (_, i) => win.gDBView.getMsgHdrAt(i).mime2DecodedSubject).sort();
+    if (subjects.join() != "Orphan message,Orphan to archive,Orphan to move") throw new Error(subjects.join());
+    `
+  );
+
+  await check(
     "Ambiguous messages are refused and nothing changes",
     client,
     `
@@ -686,6 +714,63 @@ try {
     `
   );
   await screenshot(client, "options");
+
+  await checkPage(
+    "settings page: clicking a row shows the message",
+    client,
+    `
+    doc.querySelector("#diagnosis").scrollIntoView();
+    `
+  );
+  await screenshot(client, "diagnosis");
+  await checkPage(
+    "settings page: click the first problem row",
+    client,
+    `
+    doc.querySelector("#problems tbody tr").click();
+    `
+  );
+
+  await check(
+    "the clicked message is selected in All Mail",
+    client,
+    `
+    const tabmail = window.document.getElementById("tabmail");
+    const about = () => tabmail.currentAbout3Pane;
+    await until(() => about()?.gFolder?.URI == folder("All Mail").URI && about().gDBView?.hdrForFirstSelectedMessage, "message shown");
+    const id = about().gDBView.hdrForFirstSelectedMessage.messageId;
+    if (!["copy@test", "twin@test"].includes(id)) throw new Error("selected " + id);
+    tabmail.switchToTab(tabmail.tabInfo.find(t => t.mode.name == "contentTab"));
+    `
+  );
+
+  await checkPage(
+    "settings page: the saved search button",
+    client,
+    `
+    doc.getElementById("openSearch").click();
+    `
+  );
+
+  await check(
+    "the saved search No folder is created and shown",
+    client,
+    `
+    const tabmail = window.document.getElementById("tabmail");
+    const shown = () => tabmail.currentAbout3Pane?.gFolder;
+    await until(() => shown()?.getFlag(Ci.nsMsgFolderFlags.Virtual) && shown().name == "No folder (All Mail Buddy)", "saved search shown");
+    if (shown().parent != root()) throw new Error("created in " + shown().parent.name);
+    `
+  );
+  await screenshot(client, "saved-search");
+  await check(
+    "back to the settings page",
+    client,
+    `
+    const tabmail = window.document.getElementById("tabmail");
+    tabmail.switchToTab(tabmail.tabInfo.find(t => t.mode.name == "contentTab"));
+    `
+  );
 
   // ---- IMAP ------------------------------------------------------------------
   // Thunderbird's own fake IMAP server (from its test suite) runs inside the

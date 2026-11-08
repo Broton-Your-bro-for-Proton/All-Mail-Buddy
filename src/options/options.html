@@ -45,12 +45,17 @@
       <p class="muted">All Mail messages that do not have exactly one matching copy in a real folder.</p>
       <div id="diagnosis"></div>
       <div class="actions">
+        <button id="openSearch" class="btn btn-primary" type="button">Open saved search "No folder"</button>
         <button id="showProblems" class="btn btn-default" type="button">Show all affected messages</button>
         <label class="row" id="problemFilterRow" hidden>
           <span>Problem</span>
           <select id="problemFilter"><option value="">All</option></select>
         </label>
       </div>
+      <p class="muted">
+        The saved search appears as a folder next to All Mail and lists the messages without a folder each time it
+        is opened, so they can be selected and handled together. Click a row in the list below to show that message.
+      </p>
       <p id="problemCount" class="muted" hidden></p>
       <div id="problems" class="table-wrap"></div>
     </section>

@@ -5,12 +5,14 @@ var { ExtensionCommon } = ChromeUtils.importESModule("resource://gre/modules/Ext
 var { MailServices } = ChromeUtils.importESModule("resource:///modules/MailServices.sys.mjs");
 var { MailUtils } = ChromeUtils.importESModule("resource:///modules/MailUtils.sys.mjs");
 var { MessageArchiver } = ChromeUtils.importESModule("resource:///modules/MessageArchiver.sys.mjs");
+var { VirtualFolderHelper } = ChromeUtils.importESModule("resource:///modules/VirtualFolderWrapper.sys.mjs");
 var { ThreadPaneColumns } = ChromeUtils.importESModule("chrome://messenger/content/ThreadPaneColumns.mjs");
 var { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/modules/Timer.sys.mjs");
 
 const LOCATION_COLUMN = "allMailPlusLocation";
 const LABELS_COLUMN = "allMailPlusLabels";
 const INIT_PROPERTY = "allMailPlusColumnsInit";
+const SEARCH_TERM_ID = "allmailplus@hypercrisis#location";
 
 const HANDLED_COMMANDS = new Set([
   "cmd_deleteMessage",
@@ -78,6 +80,7 @@ const controller = {
     this.config = { ...this.config, ...config };
 
     this.registerColumns();
+    this.registerSearchTerm();
     MailServices.mfn.addListener(
       this.folderListener,
       mfn.msgAdded | mfn.msgsDeleted | mfn.msgsMoveCopyCompleted | mfn.msgKeyChanged |
@@ -445,7 +448,7 @@ const controller = {
       } else if (result.labels.length) {
         detail = `Labels: ${result.labels.join(", ")}`;
       }
-      list.push({ ...this.describeHdr(hdr), problem: result.status, detail });
+      list.push({ ...this.describeHdr(hdr), uri: hdr.folder.getUriForMsg(hdr), problem: result.status, detail });
     }
     return list.sort((a, b) => b.date - a.date);
   },
@@ -971,9 +974,103 @@ const controller = {
   },
 
   rebuildLater(folder) {
+    // Saved searches do not change what the index holds.
+    if (folder?.getFlag(Flags.Virtual)) {
+      return;
+    }
     if (this.accountFor(folder) || this.detectAccounts().some(a => a.server == folder?.server)) {
       this.debounce("rebuild", 1000, () => this.rebuild(false));
     }
+  },
+
+  // ---- search term -----------------------------------------------------------
+
+  /**
+   * Search criterion "Folder (All Mail Buddy)" for Search Messages and saved
+   * searches. The value is compared with the Folder column, or with a status:
+   * nofolder, ambiguous or missing. Thunderbird cannot remove a custom term, so
+   * a reloaded add-on takes over the term it registered before.
+   */
+  registerSearchTerm() {
+    let existing = null;
+    try {
+      existing = MailServices.filters.getCustomTerm(SEARCH_TERM_ID)?.wrappedJSObject;
+    } catch {}
+    if (existing) {
+      existing.controller = this;
+      return;
+    }
+    const Op = Ci.nsMsgSearchOp;
+    const term = {
+      QueryInterface: ChromeUtils.generateQI(["nsIMsgSearchCustomTerm"]),
+      get wrappedJSObject() {
+        return term;
+      },
+      controller: this,
+      id: SEARCH_TERM_ID,
+      get name() {
+        return `${term.controller.config.columnNames?.folder || "Folder"} (All Mail Buddy)`;
+      },
+      needsBody: false,
+      // Only the local message list knows the folder, the server does not.
+      getEnabled: scope => scope == Ci.nsMsgSearchScope.offlineMail,
+      getAvailable: scope => scope == Ci.nsMsgSearchScope.offlineMail,
+      getAvailableOperators: () => [Op.Is, Op.Isnt, Op.Contains, Op.DoesntContain],
+      match(hdr, value, op) {
+        const { text, status } = term.controller.searchInfo(hdr);
+        const wanted = value.trim().toLowerCase();
+        const exact = op == Op.Is || op == Op.Isnt;
+        const hit = exact ? text.toLowerCase() == wanted || status == wanted : text.toLowerCase().includes(wanted);
+        return op == Op.Is || op == Op.Contains ? hit : !hit;
+      },
+    };
+    MailServices.filters.addCustomTerm(term);
+  },
+
+  /** Folder column text and match status of a message, for the search term. */
+  searchInfo(hdr) {
+    const account = this.started ? this.accountFor(hdr.folder) : null;
+    const kind = account && this.describe(hdr.folder).kind;
+    if (account?.state != "ready" || (kind != "allmail" && kind != "label")) {
+      return { text: "", status: "" };
+    }
+    return { text: this.locationText(hdr), status: account.index.resolve(this.entryOf(hdr)).status };
+  },
+
+  /**
+   * Shows a saved search with every message without a folder. It is created
+   * once per account, next to All Mail, and is a local folder only.
+   */
+  openNoFolderSearch() {
+    const name = `${this.config.columnNames?.noFolder || "No folder"} (All Mail Buddy)`;
+    let shown = null;
+    for (const account of this.accounts.values()) {
+      const folder =
+        account.root.subFolders.find(f => f.getFlag(Flags.Virtual) && f.name == name) ??
+        this.createNoFolderSearch(account, name);
+      const count = account.coverage?.nofolder ?? 0;
+      if (!shown || count > shown.count) {
+        shown = { folder, count };
+      }
+    }
+    if (shown) {
+      MailUtils.displayFolderIn3Pane(shown.folder.URI);
+    }
+    return !!shown;
+  },
+
+  createNoFolderSearch(account, name) {
+    const session = Cc["@mozilla.org/messenger/searchSession;1"].createInstance(Ci.nsIMsgSearchSession);
+    const term = session.createTerm();
+    const value = term.value;
+    value.attrib = Ci.nsMsgSearchAttrib.Custom;
+    value.str = "nofolder";
+    term.attrib = Ci.nsMsgSearchAttrib.Custom;
+    term.customId = SEARCH_TERM_ID;
+    term.op = Ci.nsMsgSearchOp.Is;
+    term.value = value;
+    term.booleanAnd = true;
+    return VirtualFolderHelper.createNewVirtualFolder(name, account.root, [account.allMail], [term], false).virtualFolder;
   },
 
   // ---- columns -------------------------------------------------------------
@@ -1630,6 +1727,11 @@ this.allMailPlus = class extends ExtensionCommon.ExtensionAPI {
               folders: await controller.serverFolders(account),
             }))
           ),
+        openNoFolderSearch: async () => controller.openNoFolderSearch(),
+        showMessage: async uri => {
+          const hdr = MailServices.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
+          MailUtils.displayMessageInFolderTab(hdr);
+        },
         listProblems: async () =>
           Promise.all(
             [...controller.accounts.values()].map(async account => ({
