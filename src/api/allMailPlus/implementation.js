@@ -35,6 +35,7 @@ const RESOURCE_HOST = "allmailplus";
 const STATUS_TOPIC = "allmailplus-status";
 const CHECK_SECONDS = 60;
 const SEARCH_CHUNK = 100; // Message-IDs per IMAP SEARCH
+const REPAIR_LIMIT = 25; // folders per click on "Repair folders"
 const STATE_PREF = "extensions.allmailplus.serverCheck"; // JSON, see checkState()
 const resourceHandler = () =>
   Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler);
@@ -370,6 +371,7 @@ const controller = {
     const count = (map, key) => (map[key] = (map[key] ?? 0) + 1);
     const stale = new Set();
     const orphanIds = new Set();
+    const differing = new Set(); // real folders with a copy that differs in size or date
     try {
       const db = account.allMail.msgDatabase;
       const keys = db.listAllKeys();
@@ -390,6 +392,7 @@ const controller = {
         }
         if (result.status == "missing") {
           count(coverage.reasons, result.reason);
+          result.candidates.forEach(c => differing.add(c.uri));
           const [closest] = result.candidates;
           if (closest && closest.size != entry.size) {
             count(coverage.sizeDeltas, closest.size - entry.size);
@@ -400,8 +403,10 @@ const controller = {
         }
       }
     } catch {}
+    coverage.differingFolders = differing.size;
     account.coverage = coverage;
     account.orphanIds = orphanIds;
+    account.differingUris = differing;
     this.refreshFolders(account, stale, 10 * 60000).catch(console.error);
     const due = core.serverCheckDue({
       enabled: this.config.dailyServerCheck,
@@ -768,6 +773,59 @@ const controller = {
     });
     await rebuild(folder);
     await loaded;
+  },
+
+  /**
+   * Repairs the folders that hold a copy with another size or date than its
+   * All Mail message, so Thunderbird loads their lists from the server again.
+   */
+  async repairDifferingFolders(key) {
+    const result = { repaired: [], skipped: [], errors: [], busy: "" };
+    const account = this.accounts.get(key);
+    if (Services.io.offline) {
+      result.busy = "Thunderbird is offline";
+      return result;
+    }
+    if (!account || account.state != "ready" || this.serverChecks.has(key)) {
+      result.busy = "the account is syncing, indexing or being checked";
+      return result;
+    }
+    // Pauses syncs and change checks, as during a server check.
+    this.serverChecks.add(key);
+    const alive = () => this.started && this.accounts.get(key) === account;
+    const state = this.checkState();
+    try {
+      for (const uri of [...(account.differingUris ?? [])].slice(0, REPAIR_LIMIT)) {
+        const folder = MailServices.folderLookup.getFolderForURL(uri);
+        if (!folder || !alive()) {
+          continue;
+        }
+        const name = this.describe(folder).name;
+        const now = Date.now();
+        if (folder.locked || folder.getFlag(Flags.OfflineEvents)) {
+          result.skipped.push(`${name} (busy)`);
+        } else if (core.repairedRecently(state.repaired[uri], now)) {
+          result.skipped.push(`${name} (repaired today)`);
+        } else {
+          try {
+            await this.repairFolder(folder);
+            await this.scanFolder(account, folder);
+            result.repaired.push(name);
+            state.repaired[uri] = now;
+            this.saveCheckState(state);
+          } catch (e) {
+            result.errors.push(`${name}: ${e.message}`);
+          }
+        }
+      }
+    } finally {
+      this.serverChecks.delete(key);
+      if (alive()) {
+        this.coverageLater(account);
+        this.refreshColumns();
+      }
+    }
+    return result;
   },
 
   /** Server folders (from a full LIST, like the Subscribe dialog) that Thunderbird does not have. */
@@ -1718,6 +1776,7 @@ this.allMailPlus = class extends ExtensionCommon.ExtensionAPI {
             }))
           ),
         openNoFolderSearch: async () => controller.openNoFolderSearch(),
+        repairDifferingFolders: async key => controller.repairDifferingFolders(key),
         showMessage: async uri => {
           const hdr = MailServices.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
           MailUtils.displayMessageInFolderTab(hdr);

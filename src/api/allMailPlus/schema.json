@@ -22,6 +22,12 @@
       { "name": "listProblems", "type": "function", "async": true, "parameters": [] },
       { "name": "openNoFolderSearch", "type": "function", "async": true, "parameters": [] },
       {
+        "name": "repairDifferingFolders",
+        "type": "function",
+        "async": true,
+        "parameters": [{ "name": "key", "type": "string" }]
+      },
+      {
         "name": "showMessage",
         "type": "function",
         "async": true,
