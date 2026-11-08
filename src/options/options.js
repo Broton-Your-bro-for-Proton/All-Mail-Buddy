@@ -97,8 +97,8 @@ async function showOnly(problem) {
   $("problemCount").scrollIntoView();
 }
 
-async function repairDiffering(account) {
-  const { repaired, skipped, errors, unfixable, busy } = await browser.allMailPlus.repairDifferingFolders(account.key);
+async function repairDiffering(account, kind = "missing") {
+  const { repaired, skipped, errors, unfixable, busy } = await browser.allMailPlus.repairDifferingFolders(account.key, kind);
   if (busy) {
     pageNotice = `Nothing was repaired: ${busy}. Try again in a moment.`;
     return;
@@ -108,8 +108,11 @@ async function repairDiffering(account) {
     skipped.length ? `Skipped: ${skipped.join(", ")}.` : "",
     errors.length ? `Problems: ${errors.join("; ")}.` : "",
     unfixable.length
-      ? `In ${unfixable.join(", ")} the copies still differ after the repair, so they really differ; ` +
-        "these folders are not offered for repair again for 30 days."
+      ? kind == "ambiguous"
+        ? `${unfixable.join(", ")} still list the message after the repair, so Proton really keeps it more than ` +
+          "once; these folders are not offered for repair again for 30 days."
+        : `In ${unfixable.join(", ")} the copies still differ after the repair, so they really differ; ` +
+          "these folders are not offered for repair again for 30 days."
       : "",
   ]
     .filter(Boolean)
@@ -121,18 +124,41 @@ function problemRows(account) {
   const { coverage, unreadable } = account;
   const rows = [];
   if (coverage?.ambiguous) {
+    const self = coverage.ambiguousSelf ?? 0;
+    const folders = Math.min(coverage.ambiguousFolders ?? 0, 25);
     rows.push([
       PROBLEMS.ambiguous,
       coverage.ambiguous,
       "Each of these All Mail messages matches a copy in more than one real folder, with the same Message-ID, " +
         "size and date. Proton keeps a message in a single folder, so either Thunderbird's list of one of these " +
-        "folders is out of date, or Proton really holds two identical messages. A message you sent to yourself is " +
-        "the usual case: Proton keeps it once in Sent and once in Inbox.",
+        "folders is out of date, or Proton really holds two identical messages." +
+        (self
+          ? ` ${self} of them have a copy in Sent, so they are most likely messages you sent to yourself: Proton ` +
+            "keeps those once in Sent and once in the folder they arrived in, and a repair cannot change that."
+          : ""),
       actionCell(
-        "The add-on syncs the folders involved again by itself. If the count stays, it cannot tell the copies " +
-          "apart, so it refuses delete, move and the other actions on these messages to avoid acting on the wrong " +
-          "copy. Handle them in their real folder instead; the list shows which folders hold them.",
-        [["Show them", () => showOnly("ambiguous")]]
+        "The add-on syncs the folders involved again by itself. If that does not help, repair the folders that " +
+          "hold these copies: Thunderbird then loads their message lists from the server again, which also " +
+          "downloads their offline copies again if you keep any. Messages that stay ambiguous cannot be told " +
+          "apart, so the add-on refuses delete, move and the other actions on them to avoid acting on the wrong " +
+          "copy; handle them in their real folder, which the list shows." +
+          (coverage.ambiguousUnfixable
+            ? ` In ${coverage.ambiguousUnfixable} ${coverage.ambiguousUnfixable == 1 ? "folder" : "folders"} a ` +
+              "repair did not help, so Proton really keeps those messages more than once."
+            : ""),
+        [
+          ...(folders
+            ? [
+                [
+                  `Repair ${folders} ${folders == 1 ? "folder" : "folders"}`,
+                  () => repairDiffering(account, "ambiguous"),
+                  "",
+                  `Folders: ${(coverage.ambiguousNames ?? []).join(", ")}`,
+                ],
+              ]
+            : []),
+          ["Show them", () => showOnly("ambiguous")],
+        ]
       ),
     ]);
   }

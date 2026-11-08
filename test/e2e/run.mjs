@@ -105,6 +105,7 @@ const M = {
   tab: message("tab", "Delete from message tab"),
   junkstay: message("junkstay", "Junk without move"),
   sized: message("sized", "Size differs"),
+  dup: message("dup", "Listed twice"),
 };
 // Same Message-ID and date, different body: another message, not a copy.
 const sizedOther = M.sized.replace("Body of Size differs.", "A longer body that changes the size.");
@@ -117,8 +118,8 @@ const layout = {
   Trash: [],
   Archive: [],
   Folders: [],
-  "Folders.sbd/Finanzen": [M.invoice, M.row],
-  "Folders.sbd/Shops": [M.order, M.copy],
+  "Folders.sbd/Finanzen": [M.invoice, M.row, M.dup],
+  "Folders.sbd/Shops": [M.order, M.copy, M.dup],
   Labels: [],
   "Labels.sbd/Wichtig": [M.invoice],
 };
@@ -775,14 +776,37 @@ try {
     "settings page: repair the folders that hold a differing copy, not twice a day",
     client,
     `
-    const button = [...doc.querySelectorAll("#diagnosis button")].find(b => b.textContent.startsWith("Repair"));
+    const rowOf = name => [...doc.querySelectorAll("#diagnosis tbody tr")].find(r => r.cells[0].textContent == name);
+    const repairIn = name => [...(rowOf(name)?.querySelectorAll("button") ?? [])].find(b => b.textContent.startsWith("Repair"));
+
+    // Ambiguous: only Finanzen and Shops are offered; "Sent to myself" has a copy in Sent.
+    const ambiguous = repairIn("Ambiguous");
+    if (ambiguous?.textContent != "Repair 2 folders" || /Inbox|Sent/.test(ambiguous.title)) {
+      throw new Error("ambiguous button: " + ambiguous?.textContent + " / " + ambiguous?.title);
+    }
+    if (!rowOf("Ambiguous").textContent.includes("1 of them have a copy in Sent")) throw new Error("self-sent text");
+    ambiguous.click();
+    await until(() => doc.getElementById("notice").textContent.includes("so Proton really keeps it more than once"), "ambiguous repaired", 60000).catch(e => {
+      throw new Error(e.message + ": " + doc.getElementById("notice").textContent);
+    });
+    // The local duplicates are real, so these folders are not offered again. (Repairing a
+    // local folder rereads its file, which can bring back deleted messages elsewhere.)
+    await until(
+      () => !/Finanzen|Shops/.test(repairIn("Ambiguous")?.title ?? "") && rowOf("Ambiguous").textContent.includes("a repair did not help"),
+      "no second offer",
+      30000
+    ).catch(e => {
+      throw new Error(e.message + ": " + repairIn("Ambiguous")?.title);
+    });
+
+    const button = repairIn("Copy differs");
     if (button?.textContent != "Repair 1 folder") throw new Error("button: " + button?.textContent);
     button.click();
     await until(() => doc.getElementById("notice").textContent.startsWith("Repaired: Inbox."), "repaired", 60000).catch(e => {
       throw new Error(e.message + ": " + doc.getElementById("notice").textContent);
     });
     await until(() => !button.disabled, "button enabled again");
-    const again = [...doc.querySelectorAll("#diagnosis button")].find(b => b.textContent.startsWith("Repair"));
+    const again = repairIn("Copy differs");
     again.click();
     await until(() => doc.getElementById("notice").textContent.includes("Inbox (repaired today)"), "not repaired twice", 30000).catch(e => {
       throw new Error(e.message + ": " + doc.getElementById("notice").textContent);
@@ -824,7 +848,7 @@ try {
     const about = () => tabmail.currentAbout3Pane;
     await until(() => about()?.gFolder?.URI == folder("All Mail").URI && about().gDBView?.hdrForFirstSelectedMessage, "message shown");
     const id = about().gDBView.hdrForFirstSelectedMessage.messageId;
-    if (!["copy@test", "twin@test"].includes(id)) throw new Error("selected " + id);
+    if (!["dup@test", "twin@test"].includes(id)) throw new Error("selected " + id);
     tabmail.switchToTab(tabmail.tabInfo.find(t => t.mode.name == "contentTab"));
     `
   );
