@@ -56,15 +56,21 @@ no match and shows a few examples to look up in Proton.
 
 * **Check on the server first.** Before an action touches a real copy, the add-on
   asks the server with one IMAP SEARCH per folder whether the number Thunderbird
-  has for that copy still holds that message. If not, Thunderbird's list of the
-  folder is out of date: nothing is changed, and the folder is repaired (at most
-  once a day). This can be turned off in the settings if the server is slow.
+  has for that copy still holds that message, in batches of 100. If not,
+  nothing is changed: when the number holds another message the folder is
+  repaired (at most once a day), otherwise it is only loaded again, for example
+  after the message was moved in another app. Offline, and for folders with
+  changes made offline, the check is skipped and Thunderbird queues the action
+  as usual. It can be turned off in the settings if the server is slow.
 * **Copy is a move.** In Proton a message lives in one folder, so copying it
   into another folder of the same account files it there. The add-on therefore
-  handles Copy and Ctrl+drag within the account like Move. Copies into another
-  account or a local folder stay copies.
+  handles Copy and Ctrl+drag from a real folder to another folder of the same
+  account like Move. Copies into a label, another account or a local folder
+  stay copies.
 * **Archive** moves to the account's Archive folder, without Thunderbird's
   yearly or monthly subfolders, which would become new Proton folders.
+  Messages of other accounts in the same selection follow Thunderbird's own
+  archive settings.
 * **Delete** asks first when the real copy is already in Trash, also for the
   delete button on a row or card, because Proton then deletes it for good.
 * Moving into All Mail, or into the containers "Folders" and "Labels", is
@@ -90,7 +96,7 @@ expunges it, and Proton deletes for good what is expunged from Trash or Spam.
 Messages are only treated as having no folder once every real folder has been
 loaded from the server since Thunderbird started (by a sync, the change check
 or opening it) and could be read; until then the column shows "..." for them
-and actions on them wait.
+and actions on them are refused with a notice.
 
 ## Finding the affected messages
 

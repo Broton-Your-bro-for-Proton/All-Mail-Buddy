@@ -4,6 +4,7 @@
 var { ExtensionCommon } = ChromeUtils.importESModule("resource://gre/modules/ExtensionCommon.sys.mjs");
 var { MailServices } = ChromeUtils.importESModule("resource:///modules/MailServices.sys.mjs");
 var { MailUtils } = ChromeUtils.importESModule("resource:///modules/MailUtils.sys.mjs");
+var { MessageArchiver } = ChromeUtils.importESModule("resource:///modules/MessageArchiver.sys.mjs");
 var { VirtualFolderHelper } = ChromeUtils.importESModule("resource:///modules/VirtualFolderWrapper.sys.mjs");
 var { ThreadPaneColumns } = ChromeUtils.importESModule("chrome://messenger/content/ThreadPaneColumns.mjs");
 var { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/modules/Timer.sys.mjs");
@@ -36,6 +37,7 @@ const CHECK_SECONDS = 60;
 const SEARCH_CHUNK = 100; // Message-IDs per IMAP SEARCH
 const REPAIR_LIMIT = 25; // folders per click on "Repair folders"
 const MAX_SEARCH_IDS = 500; // Message-IDs per server check run
+const VERIFY_LABEL = "Check each message on the server before acting on it"; // as in the settings
 const STATE_PREF = "extensions.allmailplus.serverCheck"; // JSON, see checkState()
 const resourceHandler = () =>
   Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler);
@@ -533,8 +535,9 @@ const controller = {
       this.refreshedAt.set(uri, now);
       const folder = MailServices.folderLookup.getFolderForURL(uri);
       if (folder && account.index.hasFolder(uri) && current()) {
-        await this.updateFolder(folder);
-        this.markSynced(folder);
+        if (await this.updateFolder(folder)) {
+          this.markSynced(folder);
+        }
         await this.scanFolder(account, folder);
       }
     }
@@ -588,7 +591,9 @@ const controller = {
     const changed = [];
     for (const folder of [...this.trackedFolders(account), account.allMail]) {
       const imap = folder.QueryInterface(Ci.nsIMsgImapMailFolder);
-      await this.urlDone(listener => imap.updateStatus(listener, null), 15000);
+      if (!(await this.urlDone(listener => imap.updateStatus(listener, null), 15000))) {
+        continue; // no answer: neither synced nor changed
+      }
       const status = { total: imap.serverTotal, nextUid: imap.serverNextUID };
       const seen = `${status.total}/${status.nextUid}`;
       const previous = this.statusSeen.get(folder.URI) ?? null;
@@ -600,8 +605,9 @@ const controller = {
       }
     }
     for (const folder of changed) {
-      await this.updateFolder(folder);
-      this.markSynced(folder);
+      if (await this.updateFolder(folder)) {
+        this.markSynced(folder);
+      }
       if (folder != account.allMail) {
         await this.scanFolder(account, folder);
         this.refreshedAt.set(folder.URI, Date.now());
@@ -999,8 +1005,11 @@ const controller = {
       try {
         const folders = [...this.trackedFolders(account), account.allMail];
         for (const folder of folders) {
-          if (account.server.type == "imap") {
-            await this.updateFolder(folder);
+          // A repair that starts meanwhile must not overlap the sync.
+          if (this.repairing.has(account.server.key)) {
+            break;
+          }
+          if (account.server.type == "imap" && (await this.updateFolder(folder))) {
             this.markSynced(folder);
           }
           if (folder != account.allMail) {
@@ -1026,21 +1035,22 @@ const controller = {
   },
 
   /** Runs an IMAP operation that reports through an nsIUrlListener, with a timeout. */
+  /** @returns {Promise<boolean>} true when the URL finished successfully in time */
   urlDone(start, timeout) {
     return new Promise(resolve => {
-      const timer = setTimeout(resolve, timeout);
-      const done = () => {
+      const timer = setTimeout(() => resolve(false), timeout);
+      const done = ok => {
         clearTimeout(timer);
-        resolve();
+        resolve(ok);
       };
       try {
         start({
           QueryInterface: ChromeUtils.generateQI(["nsIUrlListener"]),
           OnStartRunningUrl() {},
-          OnStopRunningUrl: done,
+          OnStopRunningUrl: (url, exitCode) => done(Components.isSuccessCode(exitCode)),
         });
       } catch {
-        done();
+        done(false);
       }
     });
   },
@@ -1505,18 +1515,23 @@ const controller = {
    *
    * All Mail headers without any real folder come back as orphans.
    *
-   * @returns {{groups: Map<nsIMsgFolder, nsIMsgDBHdr[]>, orphans: nsIMsgDBHdr[], failed: number}}
+   * @returns {{groups: Map<nsIMsgFolder, nsIMsgDBHdr[]>, orphans: nsIMsgDBHdr[], failed: number, waiting: number}}
    */
   resolveReal(hdrs) {
     const groups = new Map();
     const orphans = [];
     let failed = 0;
+    let waiting = 0;
     for (const hdr of hdrs) {
       let real = hdr;
       if (this.isAllMail(hdr.folder)) {
         const account = this.accountFor(hdr.folder);
         if (this.isOrphan(account, hdr)) {
           orphans.push(hdr);
+          continue;
+        }
+        if (!account.fullySynced && account.index.resolve(this.entryOf(hdr)).status == "nofolder") {
+          waiting++;
           continue;
         }
         real = this.verifiedMatch(account, hdr);
@@ -1531,7 +1546,7 @@ const controller = {
       list.push(real);
       groups.set(real.folder, list);
     }
-    return { groups, orphans, failed };
+    return { groups, orphans, failed, waiting };
   },
 
   isOrphan(account, hdr) {
@@ -1613,60 +1628,137 @@ const controller = {
   },
 
   /**
-   * Confirms on the server that each real copy's UID still holds that message,
-   * with one IMAP SEARCH per folder. Returns a notice text when it does not.
+   * Confirms on the server that each copy's UID still holds that message, with
+   * IMAP SEARCH per folder. Returns a notice text when it does not. Offline, and
+   * for folders with changes made offline, Thunderbird queues actions as usual.
    */
   async verifyOnServer(groups) {
     for (const [folder, list] of groups) {
       // Thunderbird makes up "md5:" IDs for messages without one; those cannot be looked up.
       const checked = list.filter(hdr => !hdr.messageId.startsWith("md5:"));
-      if (folder.server.type != "imap" || !this.accountFor(folder) || !checked.length) {
+      if (
+        folder.server.type != "imap" ||
+        !this.accountFor(folder) ||
+        !checked.length ||
+        Services.io.offline ||
+        folder.getFlag(Flags.OfflineEvents)
+      ) {
         continue;
       }
       const name = this.describe(folder).name;
-      if (Services.io.offline) {
-        return "Thunderbird is offline, so the messages cannot be checked on the server. Nothing was changed.";
+      const confirmed = new Set();
+      let broken = false;
+      for (let i = 0; i < checked.length; i += SEARCH_CHUNK) {
+        const searched = new Set(checked.slice(i, i + SEARCH_CHUNK).map(hdr => hdr.messageId));
+        const { hits, ok } = await this.searchOnline(folder, searched);
+        if (!ok) {
+          return (
+            `The server did not answer the check of "${name}". Nothing was changed. Try again, or turn off ` +
+            `"${VERIFY_LABEL}" in the add-on settings.`
+          );
+        }
+        for (const hit of hits) {
+          confirmed.add(hit.key);
+          broken ||= core.hitVerdict(searched, hit.id) == "broken";
+        }
       }
-      const { hits, ok } = await this.searchOnline(folder, new Set(checked.map(hdr => hdr.messageId)));
-      if (!ok) {
-        return (
-          `The server did not answer the check of "${name}". Nothing was changed. Try again, or turn off ` +
-          '"Check each message on the server before acting" in the add-on settings.'
-        );
-      }
-      const confirmed = new Set(hits.map(hit => hit.key));
       if (checked.some(hdr => !confirmed.has(hdr.messageKey))) {
-        const repairing = this.repairInBackground(folder);
+        if (broken) {
+          // A hit whose local header is another message: the local list is wrong.
+          const repairing = this.repairInBackground(folder);
+          return (
+            `In "${name}" Thunderbird's list puts a selected message under a number that holds another message ` +
+            "on the server, so the list is out of date. Nothing was changed. " +
+            (repairing
+              ? "The folder is being repaired; try again when it shows its messages again."
+              : "Repair the folder (right-click, Properties, Repair Folder) and try again.")
+          );
+        }
+        this.refreshInBackground(folder);
         return (
-          `In "${name}" the server holds another message under the number Thunderbird has for a selected ` +
-          "message, so Thunderbird's list of that folder is out of date. Nothing was changed. " +
-          (repairing
-            ? "The folder is being repaired; try again when it shows its messages again."
-            : "Repair the folder (right-click, Properties, Repair Folder) and try again.")
+          `"${name}" changed on the server since Thunderbird last loaded it, for example because a selected ` +
+          "message was moved or deleted in another app. Nothing was changed. The folder is being loaded again; " +
+          "try again in a moment."
         );
       }
     }
     return "";
   },
 
-  /** Repairs a folder whose list was found wrong, at most once a day. */
+  refreshInBackground(folder) {
+    const account = this.accountFor(folder);
+    this.updateFolder(folder)
+      .then(ok => {
+        if (ok && account) {
+          this.markSynced(folder);
+          return this.scanFolder(account, folder);
+        }
+        return null;
+      })
+      .catch(console.error);
+  },
+
+  /** Repairs a folder whose list was found wrong, at most once a day and not during other repairs. */
   repairInBackground(folder) {
     const account = this.accountFor(folder);
+    const key = account?.server.key;
     const state = this.checkState();
     const now = Date.now();
-    if (!account || folder.locked || folder.getFlag(Flags.OfflineEvents) || core.repairedRecently(state.repaired[folder.URI], now)) {
+    if (
+      !account ||
+      this.serverChecks.has(key) ||
+      !this.rebuildFolderSummary() ||
+      folder.locked ||
+      folder.getFlag(Flags.OfflineEvents) ||
+      core.repairedRecently(state.repaired[folder.URI], now)
+    ) {
       return false;
     }
     state.repaired[folder.URI] = now;
     this.saveCheckState(state);
+    this.serverChecks.add(key);
+    this.repairing.add(key);
     this.repairFolder(folder)
       .then(loaded => loaded && this.scanFolder(account, folder))
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => {
+        this.serverChecks.delete(key);
+        this.repairing.delete(key);
+      });
     return true;
   },
 
-  async perform(win, command, hdrs, destFolder, { confirm = true } = {}) {
-    const { groups, orphans, failed } = this.resolveReal(hdrs);
+  selectedKey(win) {
+    try {
+      return win.gDBView?.hdrForFirstSelectedMessage?.messageKey ?? win.gMessage?.messageKey ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  /** One action per window at a time: the server check makes actions take a moment. */
+  async perform(win, command, hdrs, destFolder, options) {
+    if (win.allMailPlusBusy) {
+      this.notice("The previous action is still being checked on the server. Nothing else was changed.");
+      return;
+    }
+    win.allMailPlusBusy = true;
+    try {
+      await this.performChecked(win, command, hdrs, destFolder, options);
+    } finally {
+      win.allMailPlusBusy = false;
+    }
+  },
+
+  async performChecked(win, command, hdrs, destFolder, { confirm = true } = {}) {
+    const { groups, orphans, failed, waiting } = this.resolveReal(hdrs);
+    if (waiting) {
+      this.notice(
+        `${waiting} of ${hdrs.length} selected messages show no folder yet, but not every folder has been loaded ` +
+          "from the server since Thunderbird started. Nothing was changed; try again in a minute."
+      );
+      return;
+    }
     if (failed) {
       this.notice(
         `${failed} of ${hdrs.length} selected messages could not be matched to exactly one real folder. ` +
@@ -1686,7 +1778,9 @@ const controller = {
       }
     }
     if (command == "cmd_archive") {
-      const roots = [...groups.keys(), ...orphans.map(hdr => hdr.folder)].map(f => f.rootFolder);
+      const roots = [...groups.keys(), ...orphans.map(hdr => hdr.folder)]
+        .filter(f => this.accountFor(f))
+        .map(f => f.rootFolder);
       if (roots.some(r => !this.archiveFolder(r))) {
         this.notice("The account has no Archive folder. Nothing was changed.");
         return;
@@ -1703,10 +1797,15 @@ const controller = {
         orphanCopies.push([allMail, list, target]);
       }
     }
+    const selected = this.selectedKey(win);
     if (this.config.verifyOnServer !== false) {
-      const problem = await this.verifyOnServer(groups);
+      // Orphans are copied out of All Mail by UID, so All Mail is checked too.
+      const problem = await this.verifyOnServer(new Map([...groups, ...this.byFolder(orphans)]));
       if (problem) {
         this.notice(problem);
+        return;
+      }
+      if (win.closed) {
         return;
       }
     }
@@ -1744,9 +1843,10 @@ const controller = {
           if (folder != destFolder) {
             // In Proton, copying into another folder of the same account files the one
             // message there, so it is a move; Thunderbird should treat it as one.
+            const fromRealFolder = this.accountFor(folder) && this.describe(folder).kind == "real";
             const isMove =
               kind != "label" &&
-              (command == "cmd_moveMessage" || this.accountFor(destFolder) === this.accountFor(folder));
+              (command == "cmd_moveMessage" || (fromRealFolder && this.accountFor(destFolder) === this.accountFor(folder)));
             anyMove ||= isMove;
             MailServices.copy.copyMessages(folder, list, destFolder, isMove, listener, msgWindow, true);
           }
@@ -1760,12 +1860,24 @@ const controller = {
       case "cmd_archive": {
         // Bridge has one Archive folder; Thunderbird's yearly or monthly archive
         // subfolders would become new Proton folders.
+        const others = [];
         for (const [folder, list] of groups) {
+          if (!this.accountFor(folder)) {
+            others.push(...list);
+            continue;
+          }
           const archive = this.archiveFolder(folder.rootFolder);
           if (folder != archive) {
             MailServices.copy.copyMessages(folder, list, archive, true, listener, msgWindow, true);
             touched.add(archive);
           }
+        }
+        if (others.length) {
+          // Messages of other accounts follow Thunderbird's own archive settings.
+          const archiver = new MessageArchiver();
+          archiver.msgWindow = msgWindow;
+          archiver.oncomplete = done;
+          archiver.archiveMessages(others);
         }
         break;
       }
@@ -1788,7 +1900,8 @@ const controller = {
     if (win.dbViewWrapperListener) {
       win.dbViewWrapperListener._nextViewIndexAfterDelete = null;
     }
-    if (moved) {
+    // Leave the selection alone when the user moved it while the server was checked.
+    if (moved && this.selectedKey(win) == selected) {
       this.advance(win, hdrs);
     }
   },
