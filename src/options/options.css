@@ -106,6 +106,10 @@ th {
   font-weight: 600;
 }
 
+tr.clickable {
+  cursor: pointer;
+}
+
 tbody tr:hover {
   background: var(--aio-row-hover);
 }

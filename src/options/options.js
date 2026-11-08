@@ -192,19 +192,34 @@ function renderProblems() {
   $("problemCount").textContent = `${shown.length} of ${problems.length} messages.`;
   const several = new Set(problems.map(m => m.account)).size > 1;
   const headers = [...(several ? ["Account"] : []), "Date", "From", "Subject", "Problem", "Details"];
-  $("problems").replaceChildren(
-    table(
-      headers,
-      shown.map(m => [
-        ...(several ? [m.account] : []),
-        day(m.date),
-        m.author,
-        m.subject,
-        PROBLEMS[m.problem] ?? m.problem,
-        m.detail,
-      ])
-    )
+  const list = table(
+    headers,
+    shown.map(m => [
+      ...(several ? [m.account] : []),
+      day(m.date),
+      m.author,
+      m.subject,
+      PROBLEMS[m.problem] ?? m.problem,
+      m.detail,
+    ])
   );
+  [...list.tBodies[0].rows].forEach((tr, i) => {
+    tr.className = "clickable";
+    tr.title = "Show this message in All Mail";
+    tr.tabIndex = 0;
+    tr.addEventListener("click", () => showMessage(shown[i]));
+    tr.addEventListener("keydown", e => e.key == "Enter" && showMessage(shown[i]));
+  });
+  $("problems").replaceChildren(list);
+}
+
+async function showMessage(message) {
+  try {
+    await browser.allMailPlus.showMessage(message.uri);
+  } catch {
+    pageNotice = `"${message.subject}" is no longer in All Mail. Show the list again.`;
+    render();
+  }
 }
 
 async function showProblems() {
@@ -260,6 +275,7 @@ async function init() {
   $("checkServer").addEventListener("click", e => run(e.target, () => browser.allMailPlus.checkServer()));
   $("listFolders").addEventListener("click", e => run(e.target, listFolders));
   $("showProblems").addEventListener("click", e => run(e.target, showProblems));
+  $("openSearch").addEventListener("click", e => run(e.target, () => browser.allMailPlus.openNoFolderSearch()));
   $("problemFilter").addEventListener("change", renderProblems);
   render();
   setInterval(render, 2000);

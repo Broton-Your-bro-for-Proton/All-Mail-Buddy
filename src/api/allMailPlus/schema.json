@@ -19,7 +19,14 @@
       { "name": "syncNow", "type": "function", "async": true, "parameters": [] },
       { "name": "checkServer", "type": "function", "async": true, "parameters": [] },
       { "name": "listServerFolders", "type": "function", "async": true, "parameters": [] },
-      { "name": "listProblems", "type": "function", "async": true, "parameters": [] }
+      { "name": "listProblems", "type": "function", "async": true, "parameters": [] },
+      { "name": "openNoFolderSearch", "type": "function", "async": true, "parameters": [] },
+      {
+        "name": "showMessage",
+        "type": "function",
+        "async": true,
+        "parameters": [{ "name": "uri", "type": "string" }]
+      }
     ],
     "events": [
       {
