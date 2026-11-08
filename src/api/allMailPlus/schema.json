@@ -25,7 +25,10 @@
         "name": "repairDifferingFolders",
         "type": "function",
         "async": true,
-        "parameters": [{ "name": "key", "type": "string" }]
+        "parameters": [
+          { "name": "key", "type": "string" },
+          { "name": "kind", "type": "string", "optional": true }
+        ]
       },
       {
         "name": "showMessage",

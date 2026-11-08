@@ -414,6 +414,23 @@ const controller = {
     const stale = new Set();
     const orphanIds = new Set();
     const differing = new Map(); // real folder uri -> All Mail entries whose copy there differs
+    const doubled = new Map(); // real folder uri -> All Mail entries that match several real copies
+    let selfSent = 0; // ambiguous messages with a copy in Sent, most likely sent to yourself
+    const sent = new Map();
+    const isSent = uri => {
+      if (!sent.has(uri)) {
+        const folder = MailServices.folderLookup.getFolderForURL(uri);
+        sent.set(uri, !!folder && (folder.isSpecialFolder(Flags.SentMail, true) || folder.name == "Sent"));
+      }
+      return sent.get(uri);
+    };
+    const remember = (map, uri, entry) => {
+      const list = map.get(uri) ?? [];
+      if (list.length < 50) {
+        list.push(entry);
+      }
+      map.set(uri, list);
+    };
     try {
       const db = account.allMail.msgDatabase;
       const keys = db.listAllKeys();
@@ -432,15 +449,17 @@ const controller = {
             coverage.examples.push(this.describeHdr(hdr));
           }
         }
+        if (result.status == "ambiguous") {
+          // Proton really keeps a message you sent to yourself twice; a repair cannot change that.
+          if (result.matches.some(m => isSent(m.uri))) {
+            selfSent++;
+          } else {
+            result.matches.forEach(m => remember(doubled, m.uri, entry));
+          }
+        }
         if (result.status == "missing") {
           count(coverage.reasons, result.reason);
-          for (const { uri } of result.candidates) {
-            const list = differing.get(uri) ?? [];
-            if (list.length < 50) {
-              list.push(entry);
-            }
-            differing.set(uri, list);
-          }
+          result.candidates.forEach(c => remember(differing, c.uri, entry));
           const [closest] = result.candidates;
           if (closest && closest.size != entry.size) {
             count(coverage.sizeDeltas, closest.size - entry.size);
@@ -456,11 +475,20 @@ const controller = {
     coverage.differingFolders = fixable.length;
     coverage.differingNames = fixable.slice(0, REPAIR_LIMIT).map(uri => account.index.folders.get(uri)?.name ?? uri);
     coverage.unfixableFolders = differing.size - fixable.length;
+    const fixableDoubled = [...doubled.keys()].filter(
+      uri => !core.knownUnfixable(state.unfixable[`ambiguous:${uri}`], Date.now())
+    );
+    coverage.ambiguousSelf = selfSent;
+    coverage.ambiguousFolders = fixableDoubled.length;
+    coverage.ambiguousNames = fixableDoubled.slice(0, REPAIR_LIMIT).map(uri => account.index.folders.get(uri)?.name ?? uri);
+    coverage.ambiguousUnfixable = doubled.size - fixableDoubled.length;
     coverage.fullySynced = account.fullySynced;
     account.coverage = coverage;
     account.orphanIds = orphanIds;
     account.differing = differing;
     account.differingUris = new Set(fixable);
+    account.doubled = doubled;
+    account.doubledUris = new Set(fixableDoubled);
     this.refreshFolders(account, stale, 10 * 60000).catch(console.error);
     const due = core.serverCheckDue({
       // Messages in folders that were not synced yet only look folderless.
@@ -860,9 +888,10 @@ const controller = {
 
   /**
    * Repairs the folders that hold a copy with another size or date than its
-   * All Mail message, so Thunderbird loads their lists from the server again.
+   * All Mail message ("missing"), or one of several matching copies
+   * ("ambiguous"), so Thunderbird loads their lists from the server again.
    */
-  async repairDifferingFolders(key) {
+  async repairDifferingFolders(key, kind = "missing") {
     const result = { repaired: [], skipped: [], errors: [], unfixable: [], busy: "" };
     const account = this.accounts.get(key);
     if (Services.io.offline) {
@@ -878,8 +907,12 @@ const controller = {
     this.repairing.add(key);
     const alive = () => this.started && this.accounts.get(key) === account;
     const state = this.checkState();
+    const ambiguous = kind == "ambiguous";
+    const uris = (ambiguous ? account.doubledUris : account.differingUris) ?? [];
+    const entries = (ambiguous ? account.doubled : account.differing) ?? new Map();
+    const stateKey = uri => (ambiguous ? `ambiguous:${uri}` : uri);
     try {
-      for (const uri of [...(account.differingUris ?? [])].slice(0, REPAIR_LIMIT)) {
+      for (const uri of [...uris].slice(0, REPAIR_LIMIT)) {
         const folder = MailServices.folderLookup.getFolderForURL(uri);
         if (!folder || !alive()) {
           continue;
@@ -899,13 +932,14 @@ const controller = {
               result.errors.push(`${name}: still loading, it is checked again when it has finished`);
             } else {
               await this.scanFolder(account, folder);
-              // A copy that still differs after a repair really differs: do not offer it again.
-              const still = (account.differing?.get(uri) ?? []).some(entry => {
+              // What survives a repair is real: do not offer this folder again for a while.
+              const still = (entries.get(uri) ?? []).some(entry => {
                 const r = account.index.resolve(entry);
-                return r.status == "missing" && r.candidates.some(c => c.uri == uri);
+                const refs = ambiguous ? r.matches : r.candidates;
+                return r.status == kind && refs.some(c => c.uri == uri);
               });
               if (still) {
-                state.unfixable[uri] = now;
+                state.unfixable[stateKey(uri)] = now;
                 result.unfixable.push(name);
               }
             }
@@ -2079,7 +2113,7 @@ this.allMailPlus = class extends ExtensionCommon.ExtensionAPI {
             }))
           ),
         openNoFolderSearch: async () => controller.openNoFolderSearch(),
-        repairDifferingFolders: async key => controller.repairDifferingFolders(key),
+        repairDifferingFolders: async (key, kind) => controller.repairDifferingFolders(key, kind ?? "missing"),
         showMessage: async uri => {
           const hdr = MailServices.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
           MailUtils.displayMessageInFolderTab(hdr);
