@@ -822,6 +822,40 @@ try {
     await until(() => has("Inbox", "sized") && has("Inbox", "twin") && has("Inbox", "label"), "Inbox messages after the repair", 30000);
     `
   );
+  await checkPage(
+    "settings page: turn diagnostics on",
+    client,
+    `
+    doc.getElementById("diagnostics").click();
+    `
+  );
+
+  await check(
+    "a stall of Thunderbird is detected",
+    client,
+    `
+    await sleep(1000);
+    // Block Thunderbird's main thread on purpose, as a slow operation would.
+    const end = Date.now() + 700;
+    while (Date.now() < end) {}
+    await sleep(1000);
+    `
+  );
+
+  await checkPage(
+    "settings page: the diagnostics log shows the stall",
+    client,
+    `
+    try {
+      await until(() => /STALL: Thunderbird did not respond for [0-9]+ ms/.test(doc.getElementById("diagLog").value), "stall logged", 15000).catch(e => {
+        throw new Error(e.message + ": " + JSON.stringify(doc.getElementById("diagLog").value));
+      });
+    } finally {
+      doc.getElementById("diagnostics").click();
+    }
+    `
+  );
+
   await screenshot(client, "options");
 
   await checkPage(

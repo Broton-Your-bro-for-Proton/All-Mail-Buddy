@@ -112,6 +112,24 @@
     </section>
 
     <section class="panel">
+      <h2>Diagnostics</h2>
+      <label class="row">
+        <input id="diagnostics" type="checkbox">
+        <span>Record diagnostics (for troubleshooting slowness)</span>
+      </label>
+      <p class="muted">
+        While this is on, the add-on notes how long its work takes, when Thunderbird loads Bridge folders, and every
+        moment Thunderbird stops responding for more than 0.3 seconds, together with what the add-on was doing then.
+        The log stays on this computer. Copy it and send it along when you report slowness, then turn this off again.
+      </p>
+      <textarea id="diagLog" rows="14" readonly spellcheck="false"></textarea>
+      <div class="actions">
+        <button id="copyDiag" class="btn btn-default" type="button">Copy log</button>
+        <button id="clearDiag" class="btn btn-default" type="button">Clear log</button>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>Last warning</h2>
       <p class="muted">The last warning the add-on showed, for example when it refused an action.</p>
       <p id="notice">None since Thunderbird started.</p>

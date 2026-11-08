@@ -7,7 +7,9 @@ var { MailUtils } = ChromeUtils.importESModule("resource:///modules/MailUtils.sy
 var { MessageArchiver } = ChromeUtils.importESModule("resource:///modules/MessageArchiver.sys.mjs");
 var { VirtualFolderHelper } = ChromeUtils.importESModule("resource:///modules/VirtualFolderWrapper.sys.mjs");
 var { ThreadPaneColumns } = ChromeUtils.importESModule("chrome://messenger/content/ThreadPaneColumns.mjs");
-var { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/modules/Timer.sys.mjs");
+var { setTimeout, clearTimeout, setInterval, clearInterval } = ChromeUtils.importESModule(
+  "resource://gre/modules/Timer.sys.mjs"
+);
 
 const LOCATION_COLUMN = "allMailPlusLocation";
 const LABELS_COLUMN = "allMailPlusLabels";
@@ -42,6 +44,14 @@ const resourceHandler = () =>
   Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler);
 
 const Flags = Ci.nsMsgFolderFlags;
+// Milliseconds with sub-millisecond precision where available, for diagnostics.
+const preciseNow = () => {
+  try {
+    return Components.utils.now();
+  } catch {
+    return Date.now();
+  }
+};
 const mfn = Ci.nsIMsgFolderNotificationService;
 
 let core = null;
@@ -55,6 +65,7 @@ const controller = {
     checkIntervalMinutes: 5,
     dailyServerCheck: true,
     verifyOnServer: true,
+    diagnostics: false,
     disabledAccounts: [],
   },
   accounts: new Map(), // server key -> account state
@@ -137,6 +148,8 @@ const controller = {
     }
     this.serverChecks.clear();
     this.repairing.clear();
+    clearInterval(this.diag.timer);
+    this.diag.timer = null;
     resourceHandler().setSubstitution(RESOURCE_HOST, null);
     ThreadPaneColumns.removeCustomColumn(LOCATION_COLUMN);
     ThreadPaneColumns.removeCustomColumn(LABELS_COLUMN);
@@ -150,7 +163,69 @@ const controller = {
       this.rebuild(false);
     }
     this.scheduleCheck();
+    this.updateMonitor();
     return this.status();
+  },
+
+  // ---- diagnostics -------------------------------------------------------------
+
+  diag: { log: [], active: new Map(), timer: null, last: 0, matches: 0, matchMs: 0, matchStart: 0 },
+
+  diagnose(text) {
+    if (!this.config.diagnostics) {
+      return;
+    }
+    const t = new Date();
+    const stamp = `${t.toLocaleTimeString()}.${String(t.getMilliseconds()).padStart(3, "0")}`;
+    this.diag.log.push(`${stamp}  ${text}`);
+    if (this.diag.log.length > 500) {
+      this.diag.log.shift();
+    }
+  },
+
+  /** Runs fn and, with diagnostics on, records how long it took and that it was running. */
+  async timed(label, fn) {
+    if (!this.config.diagnostics) {
+      return fn();
+    }
+    const id = {};
+    const start = preciseNow();
+    this.diag.active.set(id, label);
+    try {
+      return await fn();
+    } finally {
+      this.diag.active.delete(id);
+      const ms = preciseNow() - start;
+      if (ms >= 100) {
+        this.diagnose(`${label}: ${Math.round(ms)} ms`);
+      }
+    }
+  },
+
+  /** With diagnostics on, notices when Thunderbird stops responding and what the add-on was doing. */
+  updateMonitor() {
+    clearInterval(this.diag.timer);
+    this.diag.timer = null;
+    if (!this.started || !this.config.diagnostics) {
+      return;
+    }
+    this.diag.last = preciseNow();
+    this.diag.timer = setInterval(() => {
+      const now = preciseNow();
+      const lag = now - this.diag.last - 200;
+      this.diag.last = now;
+      if (lag > 300) {
+        const active = [...new Set(this.diag.active.values())].join(", ") || "none";
+        this.diagnose(`STALL: Thunderbird did not respond for ${Math.round(lag)} ms. Add-on work in progress: ${active}`);
+      }
+      if (this.diag.matches && now - this.diag.matchStart > 1000) {
+        this.diagnose(
+          `Search criterion: ${this.diag.matches} messages checked, ${Math.round(this.diag.matchMs)} ms in the add-on`
+        );
+        this.diag.matches = 0;
+        this.diag.matchMs = 0;
+      }
+    }, 200);
   },
 
   failed(error) {
@@ -319,7 +394,11 @@ const controller = {
     });
   },
 
-  async scanFolder(account, folder) {
+  scanFolder(account, folder) {
+    return this.timed(`read ${this.describe(folder).name}`, () => this.readFolder(account, folder));
+  },
+
+  async readFolder(account, folder) {
     const info = this.describe(folder);
     const dbService = Cc["@mozilla.org/msgDatabase/msgDBService;1"].getService(Ci.nsIMsgDBService);
     const wasOpen = !!dbService.cachedDBForFolder(folder);
@@ -399,7 +478,11 @@ const controller = {
    * Counts how All Mail resolves. For messages without a match it records why,
    * and how far size (bytes) and date (seconds) are off from the closest copy.
    */
-  async updateCoverage(account) {
+  updateCoverage(account) {
+    return this.timed(`count All Mail of ${account.name}`, () => this.countCoverage(account));
+  },
+
+  async countCoverage(account) {
     const coverage = {
       unique: 0,
       ambiguous: 0,
@@ -507,7 +590,11 @@ const controller = {
   },
 
   /** Every All Mail message without exactly one real copy, with the reason. */
-  async problems(account) {
+  problems(account) {
+    return this.timed("list affected messages", () => this.listProblems(account));
+  },
+
+  async listProblems(account) {
     const list = [];
     const db = account.allMail.msgDatabase;
     const signed = n => `${n > 0 ? "+" : ""}${n}`;
@@ -603,7 +690,7 @@ const controller = {
     account.checking = true;
     account.checkedAt = Date.now();
     try {
-      await this.syncChangedFolders(account);
+      await this.timed(`change check of ${account.name}`, () => this.syncChangedFolders(account));
     } finally {
       // A slow check loads All Mail late; that load must not start another one.
       account.checkedAt = Date.now();
@@ -666,7 +753,11 @@ const controller = {
    * does it; folders that have the message are rescanned. The daily run does
    * not repair the same folder again within a week.
    */
-  async checkServer(account, { auto = false } = {}) {
+  checkServer(account, options) {
+    return this.timed(`server check of ${account.name}`, () => this.runServerCheck(account, options));
+  },
+
+  async runServerCheck(account, { auto = false } = {}) {
     const key = account.server.key;
     if (account.server.type != "imap" || account.state != "ready" || this.serverChecks.has(key)) {
       return;
@@ -868,7 +959,11 @@ const controller = {
    *
    * @returns {Promise<boolean>} false when it did not finish loading in time
    */
-  async repairFolder(folder) {
+  repairFolder(folder) {
+    return this.timed(`repair ${this.describe(folder).name}`, () => this.runRepair(folder));
+  },
+
+  async runRepair(folder) {
     const rebuild = this.rebuildFolderSummary();
     if (!rebuild) {
       throw new Error("no mail window is open to repair folders in");
@@ -1011,7 +1106,11 @@ const controller = {
 
   // ---- syncing -------------------------------------------------------------
 
-  async syncAll() {
+  syncAll() {
+    return this.timed("sync all folders", () => this.runSyncAll());
+  },
+
+  async runSyncAll() {
     for (const account of [...this.accounts.values()]) {
       // Folders being repaired must not be synced at the same time.
       if (account.state != "ready" || this.repairing.has(account.server.key)) {
@@ -1047,7 +1146,9 @@ const controller = {
   },
 
   updateFolder(folder) {
-    return this.urlDone(listener => folder.updateFolderWithListener(null, listener), 60000);
+    return this.timed(`load ${this.describe(folder).name} from the server`, () =>
+      this.urlDone(listener => folder.updateFolderWithListener(null, listener), 60000)
+    );
   },
 
   /** Runs an IMAP operation that reports through an nsIUrlListener, with a timeout. */
@@ -1135,6 +1236,9 @@ const controller = {
       }
       controller.loadWaiters.get(folder.URI)?.(true);
       controller.markSynced(folder);
+      if (controller.config.diagnostics && controller.accountFor(folder)) {
+        controller.diagnose(`Thunderbird finished loading ${folder.prettyName}`);
+      }
       if (controller.isAllMail(folder)) {
         const account = controller.accountFor(folder);
         controller.coverageLater(account);
@@ -1199,13 +1303,30 @@ const controller = {
       available: scope => scope == Scope.offlineMail || scope == Scope.onlineManual,
       operators: () => [Op.Is, Op.Isnt, Op.Contains, Op.DoesntContain],
       match: (hdr, value, op) => {
-        const { text, status } = this.searchInfo(hdr);
-        const wanted = value.trim().toLowerCase();
-        const exact = op == Op.Is || op == Op.Isnt;
-        const hit = exact ? text.toLowerCase() == wanted || status == wanted : text.toLowerCase().includes(wanted);
-        return op == Op.Is || op == Op.Contains ? hit : !hit;
+        if (this.config.diagnostics) {
+          const start = preciseNow();
+          if (!this.diag.matches) {
+            this.diag.matchStart = start;
+          }
+          this.diag.matches++;
+          try {
+            return this.matchTerm(hdr, value, op);
+          } finally {
+            this.diag.matchMs += preciseNow() - start;
+          }
+        }
+        return this.matchTerm(hdr, value, op);
       },
     };
+  },
+
+  matchTerm(hdr, value, op) {
+    const Op = Ci.nsMsgSearchOp;
+    const { text, status } = this.searchInfo(hdr);
+    const wanted = value.trim().toLowerCase();
+    const exact = op == Op.Is || op == Op.Isnt;
+    const hit = exact ? text.toLowerCase() == wanted || status == wanted : text.toLowerCase().includes(wanted);
+    return op == Op.Is || op == Op.Contains ? hit : !hit;
   },
 
   /** Folder column text and match status of a message, for the search term. */
@@ -1766,7 +1887,13 @@ const controller = {
     }
   },
 
-  async performChecked(win, command, hdrs, destFolder, { confirm = true } = {}) {
+  performChecked(win, command, hdrs, destFolder, options) {
+    return this.timed(`${command} on ${hdrs.length} messages`, () =>
+      this.runAction(win, command, hdrs, destFolder, options)
+    );
+  },
+
+  async runAction(win, command, hdrs, destFolder, { confirm = true } = {}) {
     const { groups, orphans, failed, waiting } = this.resolveReal(hdrs);
     if (waiting) {
       this.notice(
@@ -1816,7 +1943,9 @@ const controller = {
     const selected = this.selectedKey(win);
     if (this.config.verifyOnServer !== false) {
       // Orphans are copied out of All Mail by UID, so All Mail is checked too.
-      const problem = await this.verifyOnServer(new Map([...groups, ...this.byFolder(orphans)]));
+      const problem = await this.timed("check the selection on the server", () =>
+        this.verifyOnServer(new Map([...groups, ...this.byFolder(orphans)]))
+      );
       if (problem) {
         this.notice(problem);
         return;
@@ -2119,6 +2248,10 @@ this.allMailPlus = class extends ExtensionCommon.ExtensionAPI {
         showMessage: async uri => {
           const hdr = MailServices.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
           MailUtils.displayMessageInFolderTab(hdr);
+        },
+        getDiagnostics: async () => controller.diag.log.slice(),
+        clearDiagnostics: async () => {
+          controller.diag.log.length = 0;
         },
         listProblems: async () =>
           Promise.all(

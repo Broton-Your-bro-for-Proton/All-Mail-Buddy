@@ -5,6 +5,7 @@ const DEFAULTS = {
   checkIntervalMinutes: 5,
   dailyServerCheck: true,
   verifyOnServer: true,
+  diagnostics: false,
   disabledAccounts: [],
 };
 

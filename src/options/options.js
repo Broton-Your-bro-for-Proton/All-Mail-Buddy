@@ -5,6 +5,7 @@ const DEFAULTS = {
   checkIntervalMinutes: 5,
   dailyServerCheck: true,
   verifyOnServer: true,
+  diagnostics: false,
   disabledAccounts: [],
 };
 
@@ -348,7 +349,31 @@ function renderServerCheck(status) {
   }
 }
 
+async function renderDiagnostics() {
+  const log = $("diagLog");
+  const text = (await browser.allMailPlus.getDiagnostics()).join("\n");
+  if (log.value != text) {
+    const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
+    log.value = text;
+    if (atEnd) {
+      log.scrollTop = log.scrollHeight;
+    }
+  }
+}
+
+async function copyDiagnostics() {
+  const log = $("diagLog");
+  try {
+    await navigator.clipboard.writeText(log.value);
+  } catch {
+    log.select();
+    document.execCommand("copy");
+  }
+  pageNotice = "The diagnostics log was copied.";
+}
+
 async function render() {
+  renderDiagnostics();
   const status = await browser.allMailPlus.getStatus();
   renderAccounts(status);
   renderDiagnosis(status);
@@ -440,6 +465,10 @@ async function init() {
   $("checkIntervalMinutes").value = config.checkIntervalMinutes;
   $("dailyServerCheck").checked = config.dailyServerCheck;
   $("verifyOnServer").checked = config.verifyOnServer;
+  $("diagnostics").checked = config.diagnostics;
+  $("diagnostics").addEventListener("change", e => browser.storage.local.set({ diagnostics: e.target.checked }));
+  $("copyDiag").addEventListener("click", e => run(e.target, copyDiagnostics));
+  $("clearDiag").addEventListener("click", e => run(e.target, () => browser.allMailPlus.clearDiagnostics()));
   $("verifyOnServer").addEventListener("change", e => browser.storage.local.set({ verifyOnServer: e.target.checked }));
   $("syncOnStartup").addEventListener("change", e => browser.storage.local.set({ syncOnStartup: e.target.checked }));
   $("checkIntervalMinutes").addEventListener("change", e => {

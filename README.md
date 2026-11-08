@@ -173,6 +173,15 @@ Security > Junk*: when "move to the Junk folder" is enabled for manual marking,
 the real message moves to Bridge's Spam folder. Not junk moves a message from
 Spam back to the Inbox.
 
+## Diagnostics
+
+*Record diagnostics* in the settings logs how long the add-on's work takes,
+when Thunderbird finishes loading Bridge folders, how long the search
+criterion spends per search, and every moment Thunderbird does not respond
+for more than 0.3 seconds, together with the add-on work running then. The
+log stays on the computer; *Copy log* puts it on the clipboard for a bug
+report.
+
 ## Development
 
 ```
