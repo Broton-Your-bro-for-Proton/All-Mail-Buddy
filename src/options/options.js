@@ -206,9 +206,20 @@ function renderProblems() {
   [...list.tBodies[0].rows].forEach((tr, i) => {
     tr.className = "clickable";
     tr.title = "Show this message in All Mail";
-    tr.addEventListener("click", () => browser.allMailPlus.showMessage(shown[i].uri));
+    tr.tabIndex = 0;
+    tr.addEventListener("click", () => showMessage(shown[i]));
+    tr.addEventListener("keydown", e => e.key == "Enter" && showMessage(shown[i]));
   });
   $("problems").replaceChildren(list);
+}
+
+async function showMessage(message) {
+  try {
+    await browser.allMailPlus.showMessage(message.uri);
+  } catch {
+    pageNotice = `"${message.subject}" is no longer in All Mail. Show the list again.`;
+    render();
+  }
 }
 
 async function showProblems() {

@@ -12,7 +12,7 @@ var { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/mo
 const LOCATION_COLUMN = "allMailPlusLocation";
 const LABELS_COLUMN = "allMailPlusLabels";
 const INIT_PROPERTY = "allMailPlusColumnsInit";
-const SEARCH_TERM_ID = "allmailplus@hypercrisis#location";
+const SEARCH_MARK = "allMailBuddySavedSearch"; // folder property of the saved search
 
 const HANDLED_COMMANDS = new Set([
   "cmd_deleteMessage",
@@ -43,6 +43,7 @@ const Flags = Ci.nsMsgFolderFlags;
 const mfn = Ci.nsIMsgFolderNotificationService;
 
 let core = null;
+let searchTerm = null;
 const emitter = new ExtensionCommon.EventEmitter();
 
 const controller = {
@@ -80,7 +81,8 @@ const controller = {
     this.config = { ...this.config, ...config };
 
     this.registerColumns();
-    this.registerSearchTerm();
+    searchTerm = ChromeUtils.importESModule(`resource://${RESOURCE_HOST}/lib/searchTerm.sys.mjs`);
+    searchTerm.setImplementation(this.searchTermImpl());
     MailServices.mfn.addListener(
       this.folderListener,
       mfn.msgAdded | mfn.msgsDeleted | mfn.msgsMoveCopyCompleted | mfn.msgKeyChanged |
@@ -101,6 +103,7 @@ const controller = {
       return;
     }
     this.started = false;
+    searchTerm?.setImplementation(null);
     MailServices.mfn.removeListener(this.folderListener);
     MailServices.mailSession.RemoveFolderListener(this.loadListener);
     Services.obs.removeObserver(this, "chrome-document-global-created");
@@ -985,56 +988,33 @@ const controller = {
 
   // ---- search term -----------------------------------------------------------
 
-  /**
-   * Search criterion "Folder (All Mail Buddy)" for Search Messages and saved
-   * searches. The value is compared with the Folder column, or with a status:
-   * nofolder, ambiguous or missing. Thunderbird cannot remove a custom term, so
-   * a reloaded add-on takes over the term it registered before.
-   */
-  registerSearchTerm() {
-    let existing = null;
-    try {
-      existing = MailServices.filters.getCustomTerm(SEARCH_TERM_ID)?.wrappedJSObject;
-    } catch {}
-    if (existing) {
-      existing.controller = this;
-      return;
-    }
+  /** What the search criterion "Folder (All Mail Buddy)" does, see lib/searchTerm.sys.mjs. */
+  searchTermImpl() {
     const Op = Ci.nsMsgSearchOp;
-    const term = {
-      QueryInterface: ChromeUtils.generateQI(["nsIMsgSearchCustomTerm"]),
-      get wrappedJSObject() {
-        return term;
-      },
-      controller: this,
-      id: SEARCH_TERM_ID,
-      get name() {
-        return `${term.controller.config.columnNames?.folder || "Folder"} (All Mail Buddy)`;
-      },
-      needsBody: false,
-      // Only the local message list knows the folder, the server does not.
-      getEnabled: scope => scope == Ci.nsMsgSearchScope.offlineMail,
-      getAvailable: scope => scope == Ci.nsMsgSearchScope.offlineMail,
-      getAvailableOperators: () => [Op.Is, Op.Isnt, Op.Contains, Op.DoesntContain],
-      match(hdr, value, op) {
-        const { text, status } = term.controller.searchInfo(hdr);
+    const Scope = Ci.nsMsgSearchScope;
+    return {
+      name: () => `${this.config.columnNames?.folder || "Folder"} (All Mail Buddy)`,
+      // The local message list knows the folder; a search on the server does not.
+      available: scope => scope == Scope.offlineMail || scope == Scope.onlineManual,
+      operators: () => [Op.Is, Op.Isnt, Op.Contains, Op.DoesntContain],
+      match: (hdr, value, op) => {
+        const { text, status } = this.searchInfo(hdr);
         const wanted = value.trim().toLowerCase();
         const exact = op == Op.Is || op == Op.Isnt;
         const hit = exact ? text.toLowerCase() == wanted || status == wanted : text.toLowerCase().includes(wanted);
         return op == Op.Is || op == Op.Contains ? hit : !hit;
       },
     };
-    MailServices.filters.addCustomTerm(term);
   },
 
   /** Folder column text and match status of a message, for the search term. */
   searchInfo(hdr) {
-    const account = this.started ? this.accountFor(hdr.folder) : null;
-    const kind = account && this.describe(hdr.folder).kind;
-    if (account?.state != "ready" || (kind != "allmail" && kind != "label")) {
+    const info = this.started ? this.matchInfo(hdr) : null;
+    // A sync keeps the index consistent; while indexing it is incomplete.
+    if (!info || info.account.state == "indexing" || info.account.state == "error") {
       return { text: "", status: "" };
     }
-    return { text: this.locationText(hdr), status: account.index.resolve(this.entryOf(hdr)).status };
+    return { text: info.text, status: info.status };
   },
 
   /**
@@ -1046,7 +1026,7 @@ const controller = {
     let shown = null;
     for (const account of this.accounts.values()) {
       const folder =
-        account.root.subFolders.find(f => f.getFlag(Flags.Virtual) && f.name == name) ??
+        account.root.subFolders.find(f => f.getFlag(Flags.Virtual) && f.getStringProperty(SEARCH_MARK) == "nofolder") ??
         this.createNoFolderSearch(account, name);
       const count = account.coverage?.nofolder ?? 0;
       if (!shown || count > shown.count) {
@@ -1066,30 +1046,40 @@ const controller = {
     value.attrib = Ci.nsMsgSearchAttrib.Custom;
     value.str = "nofolder";
     term.attrib = Ci.nsMsgSearchAttrib.Custom;
-    term.customId = SEARCH_TERM_ID;
+    term.customId = searchTerm.SEARCH_TERM_ID;
     term.op = Ci.nsMsgSearchOp.Is;
     term.value = value;
     term.booleanAnd = true;
-    return VirtualFolderHelper.createNewVirtualFolder(name, account.root, [account.allMail], [term], false).virtualFolder;
+    const folder = VirtualFolderHelper.createNewVirtualFolder(name, account.root, [account.allMail], [term], false).virtualFolder;
+    folder.setStringProperty(SEARCH_MARK, "nofolder");
+    return folder;
   },
 
   // ---- columns -------------------------------------------------------------
 
   /** Real folder of a message shown in All Mail or a label folder, else "". */
   locationText(hdr) {
+    return this.matchInfo(hdr)?.text ?? "";
+  },
+
+  /** Folder column text and match status of a message in All Mail or a label folder, else null. */
+  matchInfo(hdr) {
     const account = this.accountFor(hdr.folder);
-    const kind = account && this.describe(hdr.folder).kind;
+    const uri = hdr.folder.URI;
+    const kind = account && (uri == account.allMailURI ? "allmail" : account.index.folders.get(uri)?.kind);
     if (kind != "allmail" && kind != "label") {
-      return "";
+      return null;
     }
     const result = account.index.resolve(this.entryOf(hdr));
+    let text = result.location;
     if (account.state != "ready" && !result.location) {
-      return "…";
+      text = "…";
+    } else if (result.status == "nofolder") {
+      text = this.config.columnNames?.noFolder || "No folder";
+    } else if (result.status == "missing") {
+      text = "?";
     }
-    if (result.status == "nofolder") {
-      return this.config.columnNames?.noFolder || "No folder";
-    }
-    return result.status == "missing" ? "?" : result.location;
+    return { account, text, status: result.status };
   },
 
   labelsText(hdr) {

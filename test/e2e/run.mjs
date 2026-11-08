@@ -573,7 +573,33 @@ try {
     });
     const subjects = Array.from({ length: 3 }, (_, i) => win.gDBView.getMsgHdrAt(i).mime2DecodedSubject).sort();
     if (subjects.join() != "Orphan message,Orphan to archive,Orphan to move") throw new Error(subjects.join());
+    const Scope = Ci.nsMsgSearchScope;
+    if (!custom.getAvailable(Scope.onlineManual, Ci.nsMsgSearchOp.Is) || custom.getAvailable(Scope.onlineMail, Ci.nsMsgSearchOp.Is)) {
+      throw new Error("the term must work on the local list only");
+    }
     `
+  );
+
+  await check(
+    "After an add-on reload there is still one search term and the saved search works",
+    client,
+    `
+    const { AddonManager } = ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");
+    await (await AddonManager.getAddonByID(args[0])).reload();
+    await until(() => pane().allMailPlusHooked, "hooked again");
+    await until(() => amStatus("Bridge Simulation")?.state == "ready" && amStatus("Bridge Simulation")?.coverage, "index ready", 30000);
+    const terms = MailServices.filters.getCustomTerms().filter(t => t.id == "allmailplus@hypercrisis#location");
+    if (terms.length != 1) throw new Error(terms.length + " terms");
+    const win = pane();
+    const saved = root().getChildNamed("Test no folder");
+    win.displayFolder(folder("Inbox"));
+    await until(() => win.gFolder?.URI == folder("Inbox").URI, "inbox");
+    win.displayFolder(saved);
+    await until(() => win.gFolder?.URI == saved.URI && win.gDBView?.rowCount == 3, "three messages after reload").catch(e => {
+      throw new Error(e.message + ", rows " + win.gDBView?.rowCount);
+    });
+    `,
+    addon
   );
 
   await check(

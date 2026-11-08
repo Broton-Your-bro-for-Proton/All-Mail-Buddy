@@ -77,13 +77,16 @@ and read.
 next to All Mail (once per account, local only) and opens it. It lists every
 message without a folder each time it is opened, so they can be selected with
 Ctrl+A and deleted, moved or archived together; the actions go through the
-add-on as in All Mail.
+add-on as in All Mail. Handled messages stay in the list until the saved search
+is opened again.
 
 The saved search uses the search criterion *Folder (All Mail Buddy)*, which is
 also available in *Search Messages* and in your own saved searches. It compares
 its value with the Folder column, for example `Shops` or `No folder`, or with
 the status `nofolder`, `ambiguous` or `missing`. It only works on the local
-message list, not as a search on the server.
+message list, not as a search on the server. Message filters can use it too,
+but a message that just arrived may count as `nofolder` until its folder is
+indexed.
 
 In *Show all affected messages*, a click on a row selects that message in All
 Mail.
