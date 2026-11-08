@@ -496,6 +496,7 @@ const controller = {
     const count = (map, key) => (map[key] = (map[key] ?? 0) + 1);
     const stale = new Set();
     const orphanIds = new Set();
+    const byKey = new Map(); // All Mail key -> {status, location}, for the search criterion
     const differing = new Map(); // real folder uri -> All Mail entries whose copy there differs
     const doubled = new Map(); // real folder uri -> All Mail entries that match several real copies
     let selfSent = 0; // ambiguous messages with a copy in Sent, most likely sent to yourself
@@ -525,6 +526,7 @@ const controller = {
         const entry = this.entryOf(hdr);
         const result = account.index.resolve(entry);
         coverage[result.status]++;
+        byKey.set(keys[i], { status: result.status, location: result.location });
         core.staleUris(result).forEach(uri => stale.add(uri));
         if (result.status == "nofolder") {
           orphanIds.add(entry.id);
@@ -568,6 +570,7 @@ const controller = {
     coverage.fullySynced = account.fullySynced;
     account.coverage = coverage;
     account.orphanIds = orphanIds;
+    account.statusByKey = byKey;
     account.differing = differing;
     account.differingUris = new Set(fixable);
     account.doubled = doubled;
@@ -1237,7 +1240,7 @@ const controller = {
       controller.loadWaiters.get(folder.URI)?.(true);
       controller.markSynced(folder);
       if (controller.config.diagnostics && controller.accountFor(folder)) {
-        controller.diagnose(`Thunderbird finished loading ${folder.prettyName}`);
+        controller.diagnose(`Thunderbird finished loading ${folder.localizedName}`);
       }
       if (controller.isAllMail(folder)) {
         const account = controller.accountFor(folder);
@@ -1331,6 +1334,12 @@ const controller = {
 
   /** Folder column text and match status of a message, for the search term. */
   searchInfo(hdr) {
+    // A saved search checks every All Mail message; the last count already resolved them.
+    const account = this.started ? this.accountFor(hdr.folder) : null;
+    const cached = account && hdr.folder.URI == account.allMailURI && account.statusByKey?.get(hdr.messageKey);
+    if (cached && account.state != "indexing" && account.state != "error") {
+      return { text: this.locationLabel(account, cached), status: cached.status };
+    }
     const info = this.started ? this.matchInfo(hdr) : null;
     // A sync keeps the index consistent; while indexing it is incomplete.
     if (!info || info.account.state == "indexing" || info.account.state == "error") {
@@ -1393,15 +1402,18 @@ const controller = {
       return null;
     }
     const result = account.index.resolve(this.entryOf(hdr));
-    let text = result.location;
-    if ((account.state != "ready" && !result.location) || (result.status == "nofolder" && !account.fullySynced)) {
-      text = "…";
-    } else if (result.status == "nofolder") {
-      text = this.config.columnNames?.noFolder || "No folder";
-    } else if (result.status == "missing") {
-      text = "?";
+    return { account, text: this.locationLabel(account, result), status: result.status };
+  },
+
+  /** Folder column text for a resolve result. */
+  locationLabel(account, { status, location }) {
+    if ((account.state != "ready" && !location) || (status == "nofolder" && !account.fullySynced)) {
+      return "…";
     }
-    return { account, text, status: result.status };
+    if (status == "nofolder") {
+      return this.config.columnNames?.noFolder || "No folder";
+    }
+    return status == "missing" ? "?" : location;
   },
 
   labelsText(hdr) {

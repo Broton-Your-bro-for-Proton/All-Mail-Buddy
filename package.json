@@ -1,6 +1,6 @@
 {
   "name": "allmail-buddy-protonbridge",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "Thunderbird add-on for Proton Mail Bridge's All Mail folder",
   "scripts": {
