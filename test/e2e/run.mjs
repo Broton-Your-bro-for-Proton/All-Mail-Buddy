@@ -722,7 +722,7 @@ try {
     `
     await until(() => doc.querySelector("#diagnosis table"), "diagnosis table");
     const diagnosis = doc.getElementById("diagnosis").textContent;
-    if (!diagnosis.includes("Ambiguous") || !diagnosis.includes("Size differs")) throw new Error("diagnosis: " + diagnosis);
+    if (!diagnosis.includes("Ambiguous") || !diagnosis.includes("Copy differs") || !diagnosis.includes("1 size differs")) throw new Error("diagnosis: " + diagnosis);
     doc.getElementById("showProblems").click();
     await until(() => doc.querySelectorAll("#problems tbody tr").length >= 2, "problem rows");
     const rows = [...doc.querySelectorAll("#problems tbody tr")].map(r => r.textContent);
@@ -737,6 +737,33 @@ try {
     doc.getElementById("listFolders").click();
     await until(() => doc.getElementById("serverFolders").textContent.includes("no folder is hidden"), "server folder list");
     doc.getElementById("serverCheck").scrollIntoView();
+    `
+  );
+  await checkPage(
+    "settings page: repair the folders that hold a differing copy, not twice a day",
+    client,
+    `
+    const button = [...doc.querySelectorAll("#diagnosis button")].find(b => b.textContent.startsWith("Repair"));
+    if (button?.textContent != "Repair 1 folder") throw new Error("button: " + button?.textContent);
+    button.click();
+    await until(() => doc.getElementById("notice").textContent.startsWith("Repaired: Inbox."), "repaired", 60000).catch(e => {
+      throw new Error(e.message + ": " + doc.getElementById("notice").textContent);
+    });
+    await until(() => !button.disabled, "button enabled again");
+    const again = [...doc.querySelectorAll("#diagnosis button")].find(b => b.textContent.startsWith("Repair"));
+    again.click();
+    await until(() => doc.getElementById("notice").textContent.includes("Inbox (repaired today)"), "not repaired twice", 30000).catch(e => {
+      throw new Error(e.message + ": " + doc.getElementById("notice").textContent);
+    });
+    doc.getElementById("diagnosis").scrollIntoView();
+    `
+  );
+
+  await check(
+    "the repaired folder kept its messages",
+    client,
+    `
+    await until(() => has("Inbox", "sized") && has("Inbox", "twin") && has("Inbox", "label"), "Inbox messages after the repair", 30000);
     `
   );
   await screenshot(client, "options");

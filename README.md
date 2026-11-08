@@ -91,6 +91,15 @@ indexed.
 In *Show all affected messages*, a click on a row selects that message in All
 Mail.
 
+The diagnosis on the settings page explains each problem in full sentences
+and offers what can be done about it. For copies that differ in size or date,
+*Repair N folders* runs Thunderbird's *Repair Folder* on exactly the folders
+of that account that hold such a copy, at most 25 per click and each folder at
+most once a day, and not while Thunderbird is offline. Repairing reloads the
+folder's message list and downloads its offline copies again. If the
+difference stays afterwards, the copies really differ (or All Mail itself is
+out of date) and the add-on keeps refusing actions on them.
+
 ## Server check
 
 A message can also look folderless because Thunderbird's local list of its real

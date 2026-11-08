@@ -222,6 +222,11 @@ var AllMailCore = (() => {
     return !!enabled && nofolder > 0 && now - last >= DAY;
   }
 
+  /** A click on "Repair folders" repairs the same folder at most once a day. */
+  function repairedRecently(repairedAt, now) {
+    return !!repairedAt && now - repairedAt < DAY;
+  }
+
   /** The daily run repairs a folder at most once a week; a click always may. */
   function mayRepair({ auto, repairedAt, now }) {
     return !auto || !repairedAt || now - repairedAt >= 7 * DAY;
@@ -229,6 +234,7 @@ var AllMailCore = (() => {
 
   return {
     mayRepair,
+    repairedRecently,
     isBridgeRoot,
     classify,
     LocationIndex,

@@ -173,6 +173,14 @@ test("judges online search hits", () => {
   assert.equal(hitVerdict(searched, "1A@X"), "");
 });
 
+test("a click repairs the same folder at most once a day", () => {
+  const { repairedRecently } = require("../src/lib/core.js");
+  const day = 24 * 60 * 60 * 1000;
+  assert.equal(repairedRecently(undefined, 10 * day), false);
+  assert.equal(repairedRecently(10 * day - 1000, 10 * day), true);
+  assert.equal(repairedRecently(9 * day, 10 * day), false);
+});
+
 test("the daily run repairs a folder at most once a week", () => {
   const { mayRepair } = require("../src/lib/core.js");
   const day = 24 * 60 * 60 * 1000;

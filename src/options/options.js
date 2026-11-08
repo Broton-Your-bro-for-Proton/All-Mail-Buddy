@@ -34,9 +34,9 @@ const PROBLEMS = {
 };
 
 const REASONS = {
-  size: ["Size differs", "A real copy with the same Message-ID has another size."],
-  date: ["Date differs", "A real copy with the same Message-ID has another date."],
-  "size-date": ["Size and date differ", "A real copy with the same Message-ID differs in size and date."],
+  size: "Size differs",
+  date: "Date differs",
+  "size-date": "Size and date differ",
 };
 
 const day = ms => (ms ? new Date(ms).toLocaleDateString() : "");
@@ -49,31 +49,127 @@ const topDeltas = (map, unit) =>
     .map(([delta, n]) => `${delta > 0 ? "+" : ""}${delta} ${unit} (${n}x)`)
     .join(", ");
 
-/** Rows of the problem table: [problem, count, meaning, details]. */
+/** A cell with text and buttons; actions are [label, handler]. */
+function actionCell(text, actions = []) {
+  const td = cell(text);
+  if (actions.length) {
+    const bar = document.createElement("div");
+    bar.className = "actions";
+    for (const [label, handler, role] of actions) {
+      const button = Object.assign(document.createElement("button"), {
+        type: "button",
+        className: "btn btn-default",
+        textContent: label,
+      });
+      if (role) {
+        button.dataset.role = role;
+      }
+      button.addEventListener("click", () => run(button, handler));
+      bar.append(button);
+    }
+    td.append(bar);
+  }
+  return td;
+}
+
+async function showOnly(problem) {
+  await showProblems();
+  $("problemFilter").value = problem;
+  renderProblems();
+  $("problemCount").scrollIntoView();
+}
+
+async function repairDiffering(account) {
+  const { repaired, skipped, errors, busy } = await browser.allMailPlus.repairDifferingFolders(account.key);
+  if (busy) {
+    pageNotice = `Nothing was repaired: ${busy}. Try again in a moment.`;
+    return;
+  }
+  pageNotice = [
+    `Repaired: ${repaired.join(", ") || "none"}.`,
+    skipped.length ? `Skipped: ${skipped.join(", ")}.` : "",
+    errors.length ? `Failed: ${errors.join("; ")}.` : "",
+    'Messages that still show "Copy differs" have a copy that really differs, or All Mail itself is out of date.',
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Rows of the problem table: [problem, count, what it means, what you can do]. */
 function problemRows(account) {
   const { coverage, unreadable } = account;
   const rows = [];
   if (coverage?.ambiguous) {
-    rows.push([PROBLEMS.ambiguous, coverage.ambiguous, "Several real folders hold a matching copy. They are synced again.", ""]);
+    rows.push([
+      PROBLEMS.ambiguous,
+      coverage.ambiguous,
+      "Each of these All Mail messages matches a copy in more than one real folder, with the same Message-ID, " +
+        "size and date. Proton keeps a message in a single folder, so either Thunderbird's list of one of these " +
+        "folders is out of date, or Proton really holds two identical messages. A message you sent to yourself is " +
+        "the usual case: Proton keeps it once in Sent and once in Inbox.",
+      actionCell(
+        "The add-on syncs the folders involved again by itself. If the count stays, it cannot tell the copies " +
+          "apart, so it refuses delete, move and the other actions on these messages to avoid acting on the wrong " +
+          "copy. Handle them in their real folder instead; the list shows which folders hold them.",
+        [["Show them", () => showOnly("ambiguous")]]
+      ),
+    ]);
   }
-  for (const [key, n] of Object.entries(coverage?.reasons ?? {})) {
-    const [name, meaning] = REASONS[key] ?? [key, ""];
+  if (coverage?.missing) {
+    const reasons = Object.entries(coverage.reasons)
+      .map(([key, n]) => `${n} ${(REASONS[key] ?? key).toLowerCase()}`)
+      .join(", ");
     const deltas = [
-      key != "date" && topDeltas(coverage.sizeDeltas, "bytes"),
-      key != "size" && topDeltas(coverage.dateDeltas, "s"),
+      Object.keys(coverage.sizeDeltas).length && `The stored size is off by ${topDeltas(coverage.sizeDeltas, "bytes")}.`,
+      Object.keys(coverage.dateDeltas).length && `The date is off by ${topDeltas(coverage.dateDeltas, "seconds")}.`,
     ].filter(Boolean);
-    rows.push([name, n, meaning, deltas.join("; ")]);
+    const folders = Math.min(coverage.differingFolders ?? 0, 25);
+    rows.push([
+      PROBLEMS.missing,
+      coverage.missing,
+      `A real folder holds a message with the same Message-ID, but Thunderbird stored it with another size or ` +
+        `date than the All Mail copy (${reasons}). ${deltas.join(" ")} Often one of the two local copies is ` +
+        "outdated because the message changed on the server. To be safe, the add-on treats them as different " +
+        "messages and refuses actions on them.",
+      actionCell(
+        "Repair the folders that hold these copies: Thunderbird then loads their message lists from the server " +
+          "again, which also downloads their offline copies again if you keep any. If the difference stays, the " +
+          "copies really differ or All Mail itself is out of date; handle these messages in their real folder.",
+        [
+          [`Repair ${folders} ${folders == 1 ? "folder" : "folders"}`, () => repairDiffering(account)],
+          ["Show them", () => showOnly("missing")],
+        ]
+      ),
+    ]);
   }
   if (coverage?.nofolder) {
     rows.push([
       PROBLEMS.nofolder,
       coverage.nofolder,
-      "Only in All Mail, or in a folder whose local list is out of date. The server check tells them apart.",
-      "Delete, move, archive and junk still work: the add-on puts the message into the target folder, for delete into Trash.",
+      "No real folder in Thunderbird has a copy of these messages. Either Proton keeps them only in All Mail, " +
+        "without any folder, which happens for example when an email program moved them to a local folder, or " +
+        "Thunderbird's list of the folder that holds them is out of date.",
+      actionCell(
+        "Run the server check: it finds the folders whose list is out of date and repairs only those. The " +
+          "messages that remain really have no folder. Delete, move, archive and junk still work on them once every " +
+          "folder could be read: the add-on files the message into the target folder, and delete puts it into " +
+          "Trash. The saved search lists them all so you can handle them together.",
+        [
+          ["Check server now", () => browser.allMailPlus.checkServer(), "checkServer"],
+          ['Open saved search "No folder"', () => browser.allMailPlus.openNoFolderSearch()],
+        ]
+      ),
     ]);
   }
   if (unreadable?.length) {
-    rows.push(["Unreadable folders", unreadable.length, "Thunderbird could not open these folders.", unreadable.join(", ")]);
+    rows.push([
+      "Unreadable folders",
+      unreadable.length,
+      `Thunderbird could not open these folders, so their messages are missing from the index: ${unreadable.join(", ")}.`,
+      actionCell(
+        "Repair them in Thunderbird: right-click the folder, Properties, Repair Folder. Then click Rebuild index above."
+      ),
+    ]);
   }
   return rows;
 }
@@ -123,7 +219,15 @@ function renderAccounts(status) {
   $("empty").hidden = status.accounts.length > 0;
 }
 
+let shownDiagnosis = "";
+
 function renderDiagnosis(status) {
+  // Re-render only on changes, so buttons in the table keep working.
+  const key = JSON.stringify(status.accounts.map(a => [a.name, a.coverage, a.unreadable]));
+  if (key == shownDiagnosis) {
+    return;
+  }
+  shownDiagnosis = key;
   const parts = [];
   for (const account of status.accounts) {
     const rows = problemRows(account);
@@ -133,7 +237,9 @@ function renderDiagnosis(status) {
     if (status.accounts.length > 1) {
       parts.push(Object.assign(document.createElement("h3"), { textContent: account.name }));
     }
-    parts.push(table(["Problem", "Messages", "Meaning", "Details"], rows.map(r => [r[0], cell(r[1], "num"), r[2], r[3]])));
+    parts.push(
+      table(["Problem", "Messages", "What it means", "What you can do"], rows.map(r => [r[0], cell(r[1], "num"), r[2], r[3]]))
+    );
     const examples = account.coverage?.examples ?? [];
     if (examples.length) {
       parts.push(Object.assign(document.createElement("h3"), { textContent: "Examples without folder" }));
@@ -171,7 +277,10 @@ function renderServerCheck(status) {
       ? [table(["Account", "Last check", "State", "Messages looked up", "Repaired", "Rescanned", "Skipped"], rows)]
       : [])
   );
-  $("checkServer").disabled = status.accounts.some(a => a.serverCheck?.running);
+  const running = status.accounts.some(a => a.serverCheck?.running);
+  for (const button of [$("checkServer"), ...document.querySelectorAll('[data-role="checkServer"]')]) {
+    button.disabled = running;
+  }
 }
 
 async function render() {
