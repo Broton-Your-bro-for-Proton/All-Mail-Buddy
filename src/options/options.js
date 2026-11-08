@@ -1,6 +1,21 @@
 "use strict";
 
-const DEFAULTS = { syncOnStartup: true, syncIntervalMinutes: 15, dailyServerCheck: true, disabledAccounts: [] };
+const DEFAULTS = {
+  syncOnStartup: true,
+  syncIntervalMinutes: 0,
+  dailyServerCheck: true,
+  verifyOnServer: true,
+  disabledAccounts: [],
+};
+
+const STATES = {
+  ready: "Ready",
+  indexing: "Reading folders...",
+  syncing: "Syncing...",
+  pending: "Waiting",
+  disabled: "Off",
+  error: "Error",
+};
 const $ = id => document.getElementById(id);
 
 function cell(text, className = "") {
@@ -55,7 +70,7 @@ function actionCell(text, actions = []) {
   if (actions.length) {
     const bar = document.createElement("div");
     bar.className = "actions";
-    for (const [label, handler, role] of actions) {
+    for (const [label, handler, role, title] of actions) {
       const button = Object.assign(document.createElement("button"), {
         type: "button",
         className: "btn btn-default",
@@ -63,6 +78,9 @@ function actionCell(text, actions = []) {
       });
       if (role) {
         button.dataset.role = role;
+      }
+      if (title) {
+        button.title = title;
       }
       button.addEventListener("click", () => run(button, handler));
       bar.append(button);
@@ -80,7 +98,7 @@ async function showOnly(problem) {
 }
 
 async function repairDiffering(account) {
-  const { repaired, skipped, errors, busy } = await browser.allMailPlus.repairDifferingFolders(account.key);
+  const { repaired, skipped, errors, unfixable, busy } = await browser.allMailPlus.repairDifferingFolders(account.key);
   if (busy) {
     pageNotice = `Nothing was repaired: ${busy}. Try again in a moment.`;
     return;
@@ -88,8 +106,11 @@ async function repairDiffering(account) {
   pageNotice = [
     `Repaired: ${repaired.join(", ") || "none"}.`,
     skipped.length ? `Skipped: ${skipped.join(", ")}.` : "",
-    errors.length ? `Failed: ${errors.join("; ")}.` : "",
-    'Messages that still show "Copy differs" have a copy that really differs, or All Mail itself is out of date.',
+    errors.length ? `Problems: ${errors.join("; ")}.` : "",
+    unfixable.length
+      ? `In ${unfixable.join(", ")} the copies still differ after the repair, so they really differ; ` +
+        "these folders are not offered for repair again for 30 days."
+      : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -124,6 +145,10 @@ function problemRows(account) {
       Object.keys(coverage.dateDeltas).length && `The date is off by ${topDeltas(coverage.dateDeltas, "seconds")}.`,
     ].filter(Boolean);
     const folders = Math.min(coverage.differingFolders ?? 0, 25);
+    const unfixable = coverage.unfixableFolders
+      ? ` In ${coverage.unfixableFolders} ${coverage.unfixableFolders == 1 ? "folder" : "folders"} a repair ` +
+        "did not help, so those copies really differ, for example two different messages that share a Message-ID."
+      : "";
     rows.push([
       PROBLEMS.missing,
       coverage.missing,
@@ -134,9 +159,19 @@ function problemRows(account) {
       actionCell(
         "Repair the folders that hold these copies: Thunderbird then loads their message lists from the server " +
           "again, which also downloads their offline copies again if you keep any. If the difference stays, the " +
-          "copies really differ or All Mail itself is out of date; handle these messages in their real folder.",
+          "copies really differ or All Mail itself is out of date; handle these messages in their real folder." +
+          unfixable,
         [
-          [`Repair ${folders} ${folders == 1 ? "folder" : "folders"}`, () => repairDiffering(account)],
+          ...(folders
+            ? [
+                [
+                  `Repair ${folders} ${folders == 1 ? "folder" : "folders"}`,
+                  () => repairDiffering(account),
+                  "",
+                  `Folders: ${(coverage.differingNames ?? []).join(", ")}`,
+                ],
+              ]
+            : []),
           ["Show them", () => showOnly("missing")],
         ]
       ),
@@ -148,7 +183,11 @@ function problemRows(account) {
       coverage.nofolder,
       "No real folder in Thunderbird has a copy of these messages. Either Proton keeps them only in All Mail, " +
         "without any folder, which happens for example when an email program moved them to a local folder, or " +
-        "Thunderbird's list of the folder that holds them is out of date.",
+        "Thunderbird's list of the folder that holds them is out of date." +
+        (coverage.fullySynced
+          ? ""
+          : " Some folders have not been loaded from the server since Thunderbird started, so this number can " +
+            'still drop; until then the Folder column shows "..." for these messages and actions wait.'),
       actionCell(
         "Run the server check: it finds the folders whose list is out of date and repairs only those. The " +
           "messages that remain really have no folder. Delete, move, archive and junk still work on them once every " +
@@ -178,15 +217,15 @@ function coverageText(coverage) {
   if (!coverage) {
     return "";
   }
-  const parts = [`${coverage.unique} unique`];
+  const parts = [`${coverage.unique} matched`];
   if (coverage.ambiguous) {
     parts.push(`${coverage.ambiguous} ambiguous`);
   }
   if (coverage.missing) {
-    parts.push(`${coverage.missing} not found`);
+    parts.push(`${coverage.missing} copy differs`);
   }
   if (coverage.nofolder) {
-    parts.push(`${coverage.nofolder} without folder`);
+    parts.push(`${coverage.nofolder} no folder`);
   }
   return parts.join(", ");
 }
@@ -208,7 +247,7 @@ function renderAccounts(status) {
       return row(
         active,
         account.name,
-        cell(account.error || account.state, `state-${account.state}`),
+        cell(account.error || STATES[account.state] || account.state, `state-${account.state}`),
         cell(account.folders, "num"),
         cell(account.messages, "num"),
         coverageText(account.coverage),
@@ -374,6 +413,8 @@ async function init() {
   $("syncOnStartup").checked = config.syncOnStartup;
   $("syncIntervalMinutes").value = config.syncIntervalMinutes;
   $("dailyServerCheck").checked = config.dailyServerCheck;
+  $("verifyOnServer").checked = config.verifyOnServer;
+  $("verifyOnServer").addEventListener("change", e => browser.storage.local.set({ verifyOnServer: e.target.checked }));
   $("syncOnStartup").addEventListener("change", e => browser.storage.local.set({ syncOnStartup: e.target.checked }));
   $("syncIntervalMinutes").addEventListener("change", e =>
     browser.storage.local.set({ syncIntervalMinutes: Math.max(0, Number(e.target.value) || 0) })

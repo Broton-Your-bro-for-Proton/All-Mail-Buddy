@@ -41,8 +41,9 @@ The add-on then syncs exactly those folders again and re-checks, at most once
 every 10 minutes per folder, or after 30 seconds when you try an action on such
 a message.
 
-Thunderbird itself only syncs an IMAP folder when it is opened. To catch
-changes made in other Proton clients, the add-on asks Bridge for the message
+Thunderbird does not keep every IMAP folder up to date by itself, mostly only
+the open one and those it checks for new mail. To catch changes made in other
+Proton clients, the add-on asks Bridge for the message
 count and next UID of every folder (IMAP STATUS) once a minute and whenever All
 Mail is opened, and syncs only the folders whose numbers changed or differ from
 the local copy.
@@ -50,6 +51,24 @@ the local copy.
 Copies of the same message may differ by up to 2 bytes in Thunderbird's stored
 size, which is tolerated. The status page lists why the remaining messages have
 no match and shows a few examples to look up in Proton.
+
+## How actions work
+
+* **Check on the server first.** Before an action touches a real copy, the add-on
+  asks the server with one IMAP SEARCH per folder whether the number Thunderbird
+  has for that copy still holds that message. If not, Thunderbird's list of the
+  folder is out of date: nothing is changed, and the folder is repaired (at most
+  once a day). This can be turned off in the settings if the server is slow.
+* **Copy is a move.** In Proton a message lives in one folder, so copying it
+  into another folder of the same account files it there. The add-on therefore
+  handles Copy and Ctrl+drag within the account like Move. Copies into another
+  account or a local folder stay copies.
+* **Archive** moves to the account's Archive folder, without Thunderbird's
+  yearly or monthly subfolders, which would become new Proton folders.
+* **Delete** asks first when the real copy is already in Trash, also for the
+  delete button on a row or card, because Proton then deletes it for good.
+* Moving into All Mail, or into the containers "Folders" and "Labels", is
+  refused with a notice.
 
 ## Messages without a folder
 
@@ -68,8 +87,10 @@ account's Archive folder, and junk copies to Spam or Trash depending on the
 junk setting. The All Mail entry stays, and the column then shows the new
 folder. These copies cannot be undone with Ctrl+Z: undoing an IMAP copy
 expunges it, and Proton deletes for good what is expunged from Trash or Spam.
-Messages are only treated as having no folder once every folder was indexed
-and read.
+Messages are only treated as having no folder once every real folder has been
+loaded from the server since Thunderbird started (by a sync, the change check
+or opening it) and could be read; until then the column shows "..." for them
+and actions on them wait.
 
 ## Finding the affected messages
 
@@ -117,10 +138,13 @@ offline copies, which Thunderbird downloads again if offline sync is enabled.
 Folders whose hit is the searched message are only rescanned.
 
 The check runs from the settings page, and once a day per account when
-messages without a folder exist. The daily run can be turned off in the
+messages without a folder exist and every folder has been loaded from the
+server. One run looks up at most 500 messages; the next run continues with the
+rest. Change checks keep running during the searches; only the repairs pause
+syncs. The daily run can be turned off in the
 settings, and it repairs the same folder at most once a week. Folders that hold
-changes made while offline are never repaired, the check does not run while
-Thunderbird is offline, and syncs pause while it runs.
+changes made while offline are never repaired, and the check does not run
+while Thunderbird is offline.
 
 *List server folders missing in Thunderbird* reads the full folder list from
 the server, as the Subscribe dialog does, and shows every folder Thunderbird
@@ -179,11 +203,14 @@ on the add-on with real mail, check once with Bridge running:
 ## Limits
 
 * Actions are refused while the index is being built, and when a real copy
-  with the same Message-ID exists but none matches its size and date. Two distinct messages that agree
-  on all three can still be confused if one of their folders was not synced
-  yet. "Sync all folders now" on the settings page refreshes all folders.
+  with the same Message-ID exists but none matches its size and date. The
+  check on the server catches a folder whose local list maps a number to
+  another message. "Sync all folders now" on the settings page refreshes all
+  folders.
 * Marking as junk sets the junk score on the real message but does not train
   Thunderbird's Bayesian filter the way the native command does.
 * The Search Messages dialog and message filters are not routed.
+* The search criterion lives in a module that Thunderbird keeps loaded; a
+  change to `lib/searchTerm.sys.mjs` itself needs a Thunderbird restart.
 * Thunderbird internals change between versions, so the add-on requires
   Thunderbird 153 or later and should be re-tested after major updates.
