@@ -773,7 +773,7 @@ try {
     `
   );
   await checkPage(
-    "settings page: repair the folders that hold a differing copy, not twice a day",
+    "settings page: repair the folders that hold a differing copy and show the fresh count",
     client,
     `
     const rowOf = name => [...doc.querySelectorAll("#diagnosis tbody tr")].find(r => r.cells[0].textContent == name);
@@ -802,15 +802,14 @@ try {
     const button = repairIn("Copy differs");
     if (button?.textContent != "Repair 1 folder") throw new Error("button: " + button?.textContent);
     button.click();
-    await until(() => doc.getElementById("notice").textContent.startsWith("Repaired: Inbox."), "repaired", 60000).catch(e => {
+    await until(() => /^Repaired: Inbox[.] Messages with this problem: 1 before, [0-9]+ now[.]/.test(doc.getElementById("notice").textContent), "repaired", 60000).catch(e => {
       throw new Error(e.message + ": " + doc.getElementById("notice").textContent);
     });
-    await until(() => !button.disabled, "button enabled again");
-    const again = repairIn("Copy differs");
-    again.click();
-    await until(() => doc.getElementById("notice").textContent.includes("Inbox (repaired today)"), "not repaired twice", 30000).catch(e => {
-      throw new Error(e.message + ": " + doc.getElementById("notice").textContent);
-    });
+    // The counts are fresh right after the repair: the copy really differs, so it is
+    // reported as such and Inbox is not offered again.
+    const notice = doc.getElementById("notice").textContent;
+    if (!notice.includes("1 before, 1 now") || !notice.includes("the copies still differ")) throw new Error(notice);
+    await until(() => !repairIn("Copy differs"), "no second offer for Inbox");
     doc.getElementById("diagnosis").scrollIntoView();
     `
   );
@@ -1191,7 +1190,7 @@ try {
     await until(() => state().startsWith("run done"), "manual check done", 90000).catch(e => {
       throw new Error(e.message + ", state " + state());
     });
-    if (state() != "run done") throw new Error("state: " + state());
+    if (!/^run done, no folder: [0-9]+ before, [0-9]+ now$/.test(state())) throw new Error("state: " + state());
     doc.getElementById("serverCheck").scrollIntoView();
     `
   );

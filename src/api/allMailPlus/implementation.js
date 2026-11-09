@@ -778,6 +778,8 @@ const controller = {
       finishedAt: 0,
       messages: ids.length,
       total: all.length,
+      before: account.coverage?.nofolder ?? 0,
+      after: null,
       folders: 0,
       searched: 0,
       failed: 0,
@@ -864,6 +866,10 @@ const controller = {
         }
       }
       report.rescanned = [...stale].filter(f => !broken.has(f)).map(f => this.describe(f).name);
+      if (alive() && (report.repaired.length || report.rescanned.length)) {
+        await this.updateCoverage(account);
+      }
+      report.after = account.coverage?.nofolder ?? 0;
     } catch (e) {
       errors.push(String(e));
       console.error("All Mail Buddy:", e);
@@ -1009,6 +1015,8 @@ const controller = {
     const uris = (ambiguous ? account.doubledUris : account.differingUris) ?? [];
     const entries = (ambiguous ? account.doubled : account.differing) ?? new Map();
     const stateKey = uri => (ambiguous ? `ambiguous:${uri}` : uri);
+    const count = () => account.coverage?.[ambiguous ? "ambiguous" : "missing"] ?? 0;
+    result.before = count();
     try {
       for (const uri of [...uris].slice(0, REPAIR_LIMIT)) {
         const folder = MailServices.folderLookup.getFolderForURL(uri);
@@ -1047,6 +1055,11 @@ const controller = {
           }
         }
       }
+      // Count again right away, so the page shows at once whether the repair helped.
+      if (alive() && result.repaired.length) {
+        await this.updateCoverage(account);
+      }
+      result.after = count();
     } finally {
       this.serverChecks.delete(key);
       this.repairing.delete(key);

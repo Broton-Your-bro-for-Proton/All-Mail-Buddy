@@ -99,13 +99,17 @@ async function showOnly(problem) {
 }
 
 async function repairDiffering(account, kind = "missing") {
-  const { repaired, skipped, errors, unfixable, busy } = await browser.allMailPlus.repairDifferingFolders(account.key, kind);
+  const { repaired, skipped, errors, unfixable, busy, before, after } = await browser.allMailPlus.repairDifferingFolders(
+    account.key,
+    kind
+  );
   if (busy) {
     pageNotice = `Nothing was repaired: ${busy}. Try again in a moment.`;
     return;
   }
   pageNotice = [
     `Repaired: ${repaired.join(", ") || "none"}.`,
+    repaired.length ? `Messages with this problem: ${before} before, ${after} now.` : "",
     skipped.length ? `Skipped: ${skipped.join(", ")}.` : "",
     errors.length ? `Problems: ${errors.join("; ")}.` : "",
     unfixable.length
@@ -325,7 +329,8 @@ function checkState(c) {
   if (c.running) {
     return `running, ${c.searched} of ${c.folders} folders searched`;
   }
-  return `${c.auto ? "daily run" : "run"} done${c.error ? ` with errors: ${c.error}` : ""}`;
+  const change = c.after == null ? "" : `, no folder: ${c.before} before, ${c.after} now`;
+  return `${c.auto ? "daily run" : "run"} done${change}${c.error ? ` with errors: ${c.error}` : ""}`;
 }
 
 function renderServerCheck(status) {
