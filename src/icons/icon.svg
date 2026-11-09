@@ -9,9 +9,9 @@
     </filter>
   </defs>
   <g filter="url(#glow)">
-    <rect x="3.5" y="8.5" width="57" height="41" rx="7" fill="#191e25" stroke="#f6e6b8" stroke-width="5.5"/>
-    <path d="M9 15l23 16 23-16" fill="none" stroke="#f6e6b8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-    <g transform="translate(48.5 48) scale(0.93) translate(-49 -49)">
+    <rect x="3.5" y="6.5" width="47" height="35" rx="6.5" fill="#191e25" stroke="#f6e6b8" stroke-width="5.5"/>
+    <path d="M9 13l18 13 18-13" fill="none" stroke="#f6e6b8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(43 43) scale(1.29) translate(-49 -49)">
       <circle cx="49" cy="49" r="14" fill="#f2c45a" stroke="#191e25" stroke-width="3"/>
       <path d="M49 41.5v15M41.5 49h15" stroke="#191e25" stroke-width="6" stroke-linecap="round"/>
     </g>
