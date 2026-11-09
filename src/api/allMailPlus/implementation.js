@@ -38,7 +38,7 @@ const STATUS_TOPIC = "allmailplus-status";
 const SEARCH_CHUNK = 100; // Message-IDs per IMAP SEARCH
 const REPAIR_LIMIT = 25; // folders per click on "Repair folders"
 const MAX_SEARCH_IDS = 500; // Message-IDs per server check run
-const VERIFY_LABEL = "Check each message on the server before acting on it"; // as in the settings
+const VERIFY_LABEL = "Check messages on the server"; // as in the settings
 const STATE_PREF = "extensions.allmailplus.serverCheck"; // JSON, see checkState()
 const resourceHandler = () =>
   Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler);
@@ -64,7 +64,7 @@ const controller = {
     syncOnStartup: true,
     checkIntervalMinutes: 5,
     dailyServerCheck: true,
-    verifyOnServer: true,
+    verifyMode: "permanent", // "permanent", "always" or "never"
     diagnostics: false,
     disabledAccounts: [],
   },
@@ -1802,7 +1802,7 @@ const controller = {
         const { hits, ok } = await this.searchOnline(folder, searched);
         if (!ok) {
           return (
-            `The server did not answer the check of "${name}". Nothing was changed. Try again, or turn off ` +
+            `The server did not answer the check of "${name}". Nothing was changed. Try again, or change ` +
             `"${VERIFY_LABEL}" in the add-on settings.`
           );
         }
@@ -1888,7 +1888,7 @@ const controller = {
   /** One action per window at a time: the server check makes actions take a moment. */
   async perform(win, command, hdrs, destFolder, options) {
     if (win.allMailPlusBusy) {
-      this.notice("The previous action is still being checked on the server. Nothing else was changed.");
+      this.notice("The previous action is still running; checking the server can take a few seconds. Nothing else was changed.");
       return;
     }
     win.allMailPlusBusy = true;
@@ -1953,7 +1953,14 @@ const controller = {
       }
     }
     const selected = this.selectedKey(win);
-    if (this.config.verifyOnServer !== false) {
+    // Checking takes seconds on Bridge, so by default only where a mistake could not
+    // be undone: deleting for good, which Shift+Delete and deleting a copy in Trash do.
+    const deletes = command == "cmd_deleteMessage" || command == "cmd_shiftDeleteMessage";
+    const permanent =
+      deletes &&
+      (command == "cmd_shiftDeleteMessage" || [...groups.keys()].some(f => f.isSpecialFolder(Flags.Trash, true)));
+    const mode = this.config.verifyMode ?? "permanent";
+    if (mode == "always" || (mode == "permanent" && permanent && groups.size)) {
       // Orphans are copied out of All Mail by UID, so All Mail is checked too.
       const problem = await this.timed("check the selection on the server", () =>
         this.verifyOnServer(new Map([...groups, ...this.byFolder(orphans)]))

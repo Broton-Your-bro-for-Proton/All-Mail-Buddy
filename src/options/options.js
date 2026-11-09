@@ -4,7 +4,7 @@ const DEFAULTS = {
   syncOnStartup: true,
   checkIntervalMinutes: 5,
   dailyServerCheck: true,
-  verifyOnServer: true,
+  verifyMode: "permanent",
   diagnostics: false,
   disabledAccounts: [],
 };
@@ -464,12 +464,14 @@ async function init() {
   $("syncOnStartup").checked = config.syncOnStartup;
   $("checkIntervalMinutes").value = config.checkIntervalMinutes;
   $("dailyServerCheck").checked = config.dailyServerCheck;
-  $("verifyOnServer").checked = config.verifyOnServer;
+  const stored = await browser.storage.local.get(null);
+  $("verifyMode").value =
+    !("verifyMode" in stored) && stored.verifyOnServer === false ? "never" : config.verifyMode;
   $("diagnostics").checked = config.diagnostics;
   $("diagnostics").addEventListener("change", e => browser.storage.local.set({ diagnostics: e.target.checked }));
   $("copyDiag").addEventListener("click", e => run(e.target, copyDiagnostics));
   $("clearDiag").addEventListener("click", e => run(e.target, () => browser.allMailPlus.clearDiagnostics()));
-  $("verifyOnServer").addEventListener("change", e => browser.storage.local.set({ verifyOnServer: e.target.checked }));
+  $("verifyMode").addEventListener("change", e => browser.storage.local.set({ verifyMode: e.target.value }));
   $("syncOnStartup").addEventListener("change", e => browser.storage.local.set({ syncOnStartup: e.target.checked }));
   $("checkIntervalMinutes").addEventListener("change", e => {
     const minutes = Math.min(60, Math.max(1, Math.round(Number(e.target.value)) || 5));

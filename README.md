@@ -60,14 +60,17 @@ no match and shows a few examples to look up in Proton.
 
 ## How actions work
 
-* **Check on the server first.** Before an action touches a real copy, the add-on
-  asks the server with one IMAP SEARCH per folder whether the number Thunderbird
+* **Check on the server first.** Before deleting for good (Shift+Delete, or
+  deleting a copy that is in Trash), the add-on asks the server with one IMAP
+  SEARCH per folder whether the number Thunderbird
   has for that copy still holds that message, in batches of 100. If not,
   nothing is changed: when the number holds another message the folder is
   repaired (at most once a day), otherwise it is only loaded again, for example
   after the message was moved in another app. Offline, and for folders with
   changes made offline, the check is skipped and Thunderbird queues the action
-  as usual. It can be turned off in the settings if the server is slow.
+  as usual. Bridge needs a few seconds per check, so actions that can be
+  undone (move, archive, delete into Trash, junk) are not checked by default;
+  the settings offer "before every action" and "never" too.
 * **Copy is a move.** In Proton a message lives in one folder, so copying it
   into another folder of the same account files it there. The add-on therefore
   handles Copy and Ctrl+drag from a real folder to another folder of the same
