@@ -1,4 +1,4 @@
-# All Mail Buddy
+# All Mail Buddy for Proton
 
 Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
 
