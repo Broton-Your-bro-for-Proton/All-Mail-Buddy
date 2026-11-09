@@ -46,6 +46,7 @@ function table(headers, rows) {
 const PROBLEMS = {
   ambiguous: "Ambiguous",
   missing: "Copy differs",
+  close: "Probably the same",
   nofolder: "No folder",
 };
 
@@ -208,6 +209,21 @@ function problemRows(account) {
       ),
     ]);
   }
+  if (coverage?.close) {
+    rows.push([
+      PROBLEMS.close,
+      coverage.close,
+      "These All Mail messages have no exact copy in a real folder, but one with the same Message-ID and date " +
+        "that is only a few bytes off. Bridge serves some, mostly old, messages slightly differently in different " +
+        "folders, and a repair does not change that. So it is most likely the same message, but this cannot be " +
+        'told for sure; the Folder column shows the folder with a question mark, for example "Trash?".',
+      actionCell(
+        "Nothing to do. When you delete, move or archive one of them, the add-on asks once before it acts on " +
+          "that copy.",
+        [["Show them", () => showOnly("close")]]
+      ),
+    ]);
+  }
   if (coverage?.nofolder) {
     rows.push([
       PROBLEMS.nofolder,
@@ -254,6 +270,9 @@ function coverageText(coverage) {
   }
   if (coverage.missing) {
     parts.push(`${coverage.missing} copy differs`);
+  }
+  if (coverage.close) {
+    parts.push(`${coverage.close} probably the same`);
   }
   if (coverage.nofolder) {
     parts.push(`${coverage.nofolder} no folder`);

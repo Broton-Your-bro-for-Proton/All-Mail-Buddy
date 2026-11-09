@@ -13,7 +13,8 @@ var AllMailCore = (() => {
   const sameSize = (a, b) => Math.abs(a - b) <= SIZE_TOLERANCE;
   // Some old messages are served a few bytes differently in different folders
   // (seen: 17 bytes, stable across repairs). Without an exact copy, a copy with
-  // the same Message-ID and date that is at most this much off is the message.
+  // the same Message-ID and date that is at most this much off is "close": most
+  // likely the message, but not certainly, so actions on it ask first.
   const NEAR_TOLERANCE = 32;
   const nearSize = (a, b) => Math.abs(a - b) <= NEAR_TOLERANCE;
 
@@ -131,7 +132,8 @@ var AllMailCore = (() => {
      *   "nofolder" means no real folder has the Message-ID at all: Proton keeps
      *   such a message only in All Mail. reason (missing and nofolder): "no-copy",
      *   "label-only", "size", "date" or "size-date"; candidates are the real
-     *   copies with the same Message-ID.
+     *   copies with the same Message-ID; close (only when there is no match)
+     *   are candidates with the same date at most NEAR_TOLERANCE bytes off.
      */
     resolve({ id, size, date }) {
       const refs = [...(this.byId.get(id) ?? [])];
@@ -141,12 +143,7 @@ var AllMailCore = (() => {
       const close = list => list.filter(r => nearSize(r.size, size) && r.date == date);
       const ofKind = kind => refs.filter(r => this.folders.get(r.uri).kind == kind);
       const candidates = ofKind("real");
-      let matches = exact(candidates);
-      let narrow = exact;
-      if (!matches.length && close(candidates).length) {
-        matches = close(candidates);
-        narrow = close;
-      }
+      const matches = exact(candidates);
       const names = list => [...new Set(list.map(r => this.folders.get(r.uri).name))];
       let reason = "";
       if (!matches.length) {
@@ -162,10 +159,10 @@ var AllMailCore = (() => {
         status: candidates.length ? (["missing", "unique"][matches.length] ?? "ambiguous") : "nofolder",
         matches,
         location: names(matches).join(", "),
-        labels: names(narrow(ofKind("label"))).sort(),
+        labels: names(exact(ofKind("label"))).sort(),
         reason,
         candidates,
-        near: narrow == close,
+        close: matches.length ? [] : close(candidates),
       };
     }
 
@@ -222,8 +219,33 @@ var AllMailCore = (() => {
   }
 
   /** The matches of a resolve result in a stable order, for pairing them with All Mail entries. */
-  function sortedMatches(result) {
-    return [...result.matches].sort((a, b) => (a.uri < b.uri ? -1 : a.uri > b.uri ? 1 : a.key - b.key));
+  function sortedMatches(copies) {
+    return [...copies].sort((a, b) => (a.uri < b.uri ? -1 : a.uri > b.uri ? 1 : a.key - b.key));
+  }
+
+  /**
+   * Pairs All Mail entries (sorted keys) with as many copies (in sortedMatches
+   * order). hints maps an All Mail key to the folder its copy was last sent to,
+   * so an entry keeps showing where the user put it.
+   *
+   * @returns {Map<number, object>} All Mail key -> copy
+   */
+  function pairCopies(keys, copies, hints = new Map()) {
+    const free = [...copies];
+    const pairs = new Map();
+    for (const key of keys) {
+      const uri = hints.get(key);
+      const i = uri ? free.findIndex(c => c.uri == uri) : -1;
+      if (i >= 0) {
+        pairs.set(key, free.splice(i, 1)[0]);
+      }
+    }
+    for (const key of keys) {
+      if (!pairs.has(key)) {
+        pairs.set(key, free.shift());
+      }
+    }
+    return pairs;
   }
 
   /** Groups All Mail entries that are copies of the same message. */
@@ -270,6 +292,7 @@ var AllMailCore = (() => {
     sameSize,
     nearSize,
     sortedMatches,
+    pairCopies,
     twinKey,
     needsSync,
     hitVerdict,

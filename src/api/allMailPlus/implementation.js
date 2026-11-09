@@ -321,6 +321,8 @@ const controller = {
         serverCheck: previous.get(server.key)?.serverCheck ?? null,
         // Real folders whose local list was loaded from the server in this session.
         synced: previous.get(server.key)?.synced ?? new Set(),
+        // All Mail key -> folder its paired copy was last sent to, so the pairing does not flip.
+        pairHints: previous.get(server.key)?.pairHints ?? new Map(),
         realUris: new Set(),
         fullySynced: false,
         coverage: null,
@@ -487,6 +489,7 @@ const controller = {
       unique: 0,
       ambiguous: 0,
       missing: 0,
+      close: 0, // only a copy a few bytes off; actions on them ask first
       nofolder: 0, // Proton keeps these only in All Mail
       reasons: {},
       sizeDeltas: {},
@@ -508,7 +511,18 @@ const controller = {
       }
       return sent.get(uri);
     };
-    const twins = new Map(); // Message-ID and date -> All Mail entries that match several copies
+    const twins = new Map(); // Message-ID and date -> All Mail entries with several or only close copies
+    const countMissing = (entry, result) => {
+      count(coverage.reasons, result.reason);
+      result.candidates.forEach(c => remember(differing, c.uri, entry));
+      const [closest] = result.candidates;
+      if (closest && closest.size != entry.size) {
+        count(coverage.sizeDeltas, closest.size - entry.size);
+      }
+      if (closest && closest.date != entry.date) {
+        count(coverage.dateDeltas, Math.round((closest.date - entry.date) / 1e6));
+      }
+    };
     const remember = (map, uri, entry) => {
       const list = map.get(uri) ?? [];
       if (list.length < 50) {
@@ -535,24 +549,21 @@ const controller = {
             coverage.examples.push(this.describeHdr(hdr));
           }
         }
-        if (result.status == "ambiguous") {
-          // Copies of one message: paired up below when the counts agree.
+        const copies = this.copiesOf(result);
+        if (copies.length) {
+          // Several copies, or only close ones: paired up below when the counts agree.
           const group = core.twinKey(entry);
-          const twin = twins.get(group) ?? { keys: [], entries: [], matches: core.sortedMatches(result) };
+          const sorted = core.sortedMatches(copies);
+          const signature = sorted.map(c => `${c.uri}#${c.key}`).join("|");
+          const close = result.status == "missing";
+          const twin = twins.get(group) ?? { keys: [], items: [], copies: sorted, signature, close, mixed: false };
+          // Entries of one group must all see the same copies, else pairing is not sound.
+          twin.mixed ||= twin.signature != signature || twin.close != close;
           twin.keys.push(keys[i]);
-          twin.entries.push(entry);
+          twin.items.push({ entry, result });
           twins.set(group, twin);
-        }
-        if (result.status == "missing") {
-          count(coverage.reasons, result.reason);
-          result.candidates.forEach(c => remember(differing, c.uri, entry));
-          const [closest] = result.candidates;
-          if (closest && closest.size != entry.size) {
-            count(coverage.sizeDeltas, closest.size - entry.size);
-          }
-          if (closest && closest.date != entry.date) {
-            count(coverage.dateDeltas, Math.round((closest.date - entry.date) / 1e6));
-          }
+        } else if (result.status == "missing") {
+          countMissing(entry, result);
         }
       }
     } catch {}
@@ -561,20 +572,23 @@ const controller = {
     // copy goes with which entry does not matter; the column and actions agree on it.
     const paired = new Map();
     for (const [group, twin] of twins) {
-      if (twin.keys.length == twin.matches.length) {
+      const n = twin.keys.length;
+      if (!twin.mixed && n == twin.copies.length) {
         const sorted = [...twin.keys].sort((a, b) => a - b);
         paired.set(group, sorted);
-        coverage.ambiguous -= sorted.length;
-        coverage.unique += sorted.length;
-        sorted.forEach((key, i) =>
-          byKey.set(key, { status: "unique", location: account.index.folders.get(twin.matches[i].uri).name })
-        );
-      } else if (twin.matches.some(m => isSent(m.uri))) {
+        const pairs = core.pairCopies(sorted, twin.copies, account.pairHints);
+        const status = twin.close ? "close" : "unique";
+        coverage[twin.close ? "missing" : "ambiguous"] -= n;
+        coverage[status] += n;
+        sorted.forEach(key => byKey.set(key, { status, location: account.index.folders.get(pairs.get(key).uri).name }));
+      } else if (twin.close) {
+        twin.items.forEach(({ entry, result }) => countMissing(entry, result));
+      } else if (twin.copies.some(m => isSent(m.uri))) {
         // Proton keeps a message you sent to yourself twice; a repair cannot change that.
-        selfSent += twin.keys.length;
+        selfSent += n;
       } else {
         // Counts disagree, so a folder list is out of date: offer a repair.
-        twin.entries.forEach(entry => twin.matches.forEach(m => remember(doubled, m.uri, entry)));
+        twin.items.forEach(({ entry }) => twin.copies.forEach(m => remember(doubled, m.uri, entry)));
       }
     }
     account.paired = paired;
@@ -632,7 +646,18 @@ const controller = {
       const hdr = db.getMsgHdrForKey(keys[i]);
       const entry = this.entryOf(hdr);
       const result = account.index.resolve(entry);
-      if (result.status == "unique" || this.pairedMatch(account, hdr, result)) {
+      const paired = this.pairedMatch(account, hdr, result);
+      if (result.status == "unique" || (paired && !paired.close)) {
+        continue;
+      }
+      if (paired) {
+        const name = account.index.folders.get(paired.copy.uri).name;
+        list.push({
+          ...this.describeHdr(hdr),
+          uri: hdr.folder.getUriForMsg(hdr),
+          problem: "close",
+          detail: `${name}: ${signed(paired.copy.size - entry.size)} bytes`,
+        });
         continue;
       }
       let detail = "";
@@ -1440,7 +1465,9 @@ const controller = {
     const result = account.index.resolve(this.entryOf(hdr));
     const paired = this.pairedMatch(account, hdr, result);
     if (paired) {
-      return { account, text: account.index.folders.get(paired.uri).name, status: "unique" };
+      const status = paired.close ? "close" : "unique";
+      const location = account.index.folders.get(paired.copy.uri).name;
+      return { account, text: this.locationLabel(account, { status, location }), status };
     }
     return { account, text: this.locationLabel(account, result), status: result.status };
   },
@@ -1452,6 +1479,9 @@ const controller = {
     }
     if (status == "nofolder") {
       return this.config.columnNames?.noFolder || "No folder";
+    }
+    if (status == "close") {
+      return `${location}?`;
     }
     return status == "missing" ? "?" : location;
   },
@@ -1704,13 +1734,16 @@ const controller = {
    *
    * All Mail headers without any real folder come back as orphans.
    *
-   * @returns {{groups: Map<nsIMsgFolder, nsIMsgDBHdr[]>, orphans: nsIMsgDBHdr[], failed: number, waiting: number}}
+   * @returns {{groups: Map<nsIMsgFolder, nsIMsgDBHdr[]>, orphans: nsIMsgDBHdr[], failed: number,
+   *   waiting: number, close: number, paired: Array<[nsIMsgDBHdr, nsIMsgDBHdr]>}}
    */
   resolveReal(hdrs) {
     const groups = new Map();
     const orphans = [];
     let failed = 0;
     let waiting = 0;
+    let close = 0;
+    const paired = []; // [All Mail header, real copy] for entries paired with a copy
     for (const hdr of hdrs) {
       let real = hdr;
       if (this.isAllMail(hdr.folder)) {
@@ -1723,19 +1756,24 @@ const controller = {
           waiting++;
           continue;
         }
-        real = this.verifiedMatch(account, hdr);
-        if (!real) {
+        const verified = this.verifiedMatch(account, hdr);
+        if (!verified) {
           failed++;
           const stale = core.staleUris(account.index.resolve(this.entryOf(hdr)));
           this.refreshFolders(account, stale, 30000).catch(console.error);
           continue;
+        }
+        real = verified.real;
+        close += verified.close ? 1 : 0;
+        if (verified.paired) {
+          paired.push([hdr, real]);
         }
       }
       const list = groups.get(real.folder) ?? [];
       list.push(real);
       groups.set(real.folder, list);
     }
-    return { groups, orphans, failed, waiting };
+    return { groups, orphans, failed, waiting, close, paired };
   },
 
   isOrphan(account, hdr) {
@@ -1780,28 +1818,39 @@ const controller = {
     return false;
   },
 
-  /** For copies that were paired up with their All Mail entries, the copy that goes with this entry. */
+  /** The copies an All Mail entry can be paired with: several matches, or only close ones. */
+  copiesOf(result) {
+    if (result.status == "ambiguous") {
+      return result.matches;
+    }
+    return result.status == "missing" ? result.close : [];
+  },
+
+  /**
+   * For entries paired up with their copies in the last count, the copy that goes
+   * with this entry; close when it is only a few bytes off. Null when the counts no
+   * longer agree, so the entry is refused until it is counted again.
+   */
   pairedMatch(account, hdr, result) {
-    if (result.status != "ambiguous") {
-      return null;
-    }
+    const copies = this.copiesOf(result);
     const keys = account.paired?.get(core.twinKey(this.entryOf(hdr)));
-    const rank = keys ? keys.indexOf(hdr.messageKey) : -1;
-    if (rank < 0 || keys.length != result.matches.length) {
+    if (!copies.length || !keys?.includes(hdr.messageKey) || keys.length != copies.length) {
       return null;
     }
-    return core.sortedMatches(result)[rank];
+    const copy = core.pairCopies(keys, core.sortedMatches(copies), account.pairHints).get(hdr.messageKey);
+    return copy ? { copy, close: result.status == "missing" } : null;
   },
 
   verifiedMatch(account, hdr) {
     const entry = this.entryOf(hdr);
     const result = account.index.resolve(entry);
-    const match = result.status == "unique" ? result.matches[0] : this.pairedMatch(account, hdr, result);
+    const paired = result.status == "unique" ? null : this.pairedMatch(account, hdr, result);
+    const match = result.status == "unique" ? result.matches[0] : paired?.copy;
     if (account.state == "indexing" || !match) {
       return null;
     }
     const { uri, key } = match;
-    const sizeOk = result.near ? core.nearSize : core.sameSize;
+    const sizeOk = paired?.close ? core.nearSize : core.sameSize;
     const folder = MailServices.folderLookup.getFolderForURL(uri);
     try {
       const real = folder.msgDatabase.getMsgHdrForKey(key);
@@ -1811,7 +1860,7 @@ const controller = {
         real.date == entry.date &&
         !(real.flags & Ci.nsMsgMessageFlags.IMAPDeleted)
       ) {
-        return real;
+        return { real, paired: !!paired, close: !!paired?.close };
       }
     } catch {}
     this.rescanLater(folder);
@@ -1940,6 +1989,41 @@ const controller = {
     }
   },
 
+  /** Asks before acting on copies that are only a few bytes off; false when declined. */
+  async confirmClose(win, count) {
+    const text =
+      `${count == 1 ? "A selected message has" : `${count} selected messages have`} no exact copy, only one ` +
+      "that differs by a few bytes from the All Mail entry. It is most likely the same message, which Bridge " +
+      "serves slightly differently in different folders, but this cannot be told for sure. Act on that copy?";
+    try {
+      const result = await Services.prompt.asyncConfirm(
+        win.top.browsingContext,
+        Ci.nsIPrompt.MODAL_TYPE_WINDOW,
+        "All Mail Buddy",
+        text
+      );
+      return result.getProperty("ok");
+    } catch (e) {
+      console.error("All Mail Buddy:", e);
+      return false;
+    }
+  },
+
+  /** The folder a real copy ends up in after an action, if it stays in the account. */
+  actionTarget(command, folder, destFolder) {
+    const root = folder.rootFolder;
+    switch (command) {
+      case "cmd_deleteMessage":
+        return folder.isSpecialFolder(Flags.Trash, true) ? null : root.getFolderWithFlags(Flags.Trash);
+      case "cmd_moveMessage":
+      case "cmd_copyMessage":
+        return this.accountFor(destFolder) && this.describe(destFolder).kind == "real" ? destFolder : null;
+      case "cmd_archive":
+        return this.archiveFolder(root);
+    }
+    return null;
+  },
+
   /** One action per window at a time: the server check makes actions take a moment. */
   async perform(win, command, hdrs, destFolder, options) {
     if (win.allMailPlusBusy) {
@@ -1961,7 +2045,7 @@ const controller = {
   },
 
   async runAction(win, command, hdrs, destFolder, { confirm = true } = {}) {
-    const { groups, orphans, failed, waiting } = this.resolveReal(hdrs);
+    const { groups, orphans, failed, waiting, close, paired } = this.resolveReal(hdrs);
     if (waiting) {
       this.notice(
         `${waiting} of ${hdrs.length} selected messages show no folder yet, but not every folder has been loaded ` +
@@ -2006,6 +2090,9 @@ const controller = {
       if (target && target != allMail) {
         orphanCopies.push([allMail, list, target]);
       }
+    }
+    if (close && !(await this.confirmClose(win, close))) {
+      return;
     }
     const selected = this.selectedKey(win);
     // Checking takes seconds on Bridge, so by default only where a mistake could not
@@ -2118,6 +2205,13 @@ const controller = {
     // does not happen now (cmd_moveToFolderAgain does this).
     if (win.dbViewWrapperListener) {
       win.dbViewWrapperListener._nextViewIndexAfterDelete = null;
+    }
+    // Paired entries keep showing the folder their copy went to.
+    for (const [hdr, real] of paired) {
+      const target = this.actionTarget(command, real.folder, destFolder);
+      if (target) {
+        this.accountFor(hdr.folder)?.pairHints.set(hdr.messageKey, target.URI);
+      }
     }
     // Leave the selection alone when the user moved it while the server was checked.
     if (moved && this.selectedKey(win) == selected) {

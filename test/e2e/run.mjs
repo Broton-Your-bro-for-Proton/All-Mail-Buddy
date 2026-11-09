@@ -107,7 +107,10 @@ const M = {
   sized: message("sized", "Size differs"),
   dup: message("dup", "Listed twice"),
   pair: message("pair", "Duplicate in one folder"),
+  close: message("close", "Close copy"),
 };
+// Same Message-ID and date, 15 bytes longer: only a close copy, actions ask first.
+const closeOther = M.close.replace("Body of Close copy.", "A longer body that changes the size.");
 // Same Message-ID and date, different body: another message, not a copy.
 const sizedOther = M.sized.replace(
   "Body of Size differs.",
@@ -116,7 +119,7 @@ const sizedOther = M.sized.replace(
 
 const layout = {
   "All Mail": [...Object.values(M).filter(m => m != M.native), M.pair],
-  Inbox: [M.hello, M.meeting, M.spam, M.twin, M.drag, M.label, M.native, M.tab, M.junkstay, sizedOther],
+  Inbox: [M.hello, M.meeting, M.spam, M.twin, M.drag, M.label, M.native, M.tab, M.junkstay, sizedOther, closeOther],
   Sent: [M.twin],
   Spam: [M.restore],
   Trash: [],
@@ -287,6 +290,24 @@ async function check(name, client, body, ...args) {
     results.push({ name, ok: false });
     console.log(`FAIL ${name}\n     ${e.message.split("\n").join("\n     ")}`);
   }
+}
+
+/** Answers the next modal dialog of Thunderbird, as the user would. */
+async function answerDialog(name, client, accept) {
+  for (let i = 0; i < 150; i++) {
+    try {
+      const text = await client.send("WebDriver:GetAlertText");
+      await client.send(accept ? "WebDriver:AcceptAlert" : "WebDriver:DismissAlert");
+      results.push({ name, ok: true });
+      console.log(`ok   ${name}`);
+      return text.value ?? text;
+    } catch {
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
+  results.push({ name, ok: false });
+  console.log(`FAIL ${name}\n     no dialog appeared`);
+  return "";
 }
 
 /**
@@ -646,20 +667,60 @@ try {
     if (copies("Folders/Finanzen") != 2 || copies("All Mail") != 2) throw new Error("setup: " + copies("Folders/Finanzen") + "/" + copies("All Mail"));
     await until(() => cell("allMailPlusLocation", "All Mail", "pair") == "Finanzen", "pair resolves");
     const win = await select("pair");
+    const deleted = win.gDBView.hdrForFirstSelectedMessage;
+    window.allMailPlusDeletedPair = deleted.messageKey;
     win.commandController.doCommand("cmd_deleteMessage");
     await until(() => copies("Trash") >= 1, "one copy in Trash");
     await sleep(1000);
     if (copies("Trash") != 1 || copies("Folders/Finanzen") != 1) {
       throw new Error("Trash " + copies("Trash") + ", Finanzen " + copies("Folders/Finanzen") + ", notice " + amNotice());
     }
-    // Now one copy is in Trash and one in Finanzen: each All Mail entry shows its own.
-    const shown = [...folder("All Mail").messages].filter(h => h.messageId == "pair@test")
-      .map(h => ThreadPaneColumns.getColumn("allMailPlusLocation").handler.getCellText(h)).sort();
-    await until(() => {
-      const now = [...folder("All Mail").messages].filter(h => h.messageId == "pair@test")
-        .map(h => ThreadPaneColumns.getColumn("allMailPlusLocation").handler.getCellText(h)).sort();
-      return now.join() == "Finanzen,Trash";
-    }, "each entry shows its own folder", 20000).catch(e => { throw new Error(e.message + ": " + shown.join()); });
+    // Now one copy is in Trash and one in Finanzen: the entry that was deleted shows Trash.
+    const text = h => ThreadPaneColumns.getColumn("allMailPlusLocation").handler.getCellText(h);
+    const entries = () => [...folder("All Mail").messages].filter(h => h.messageId == "pair@test");
+    const describe = () => entries().map(h => (h.messageKey == deleted.messageKey ? "deleted:" : "other:") + text(h)).sort().join();
+    await until(() => describe() == "deleted:Trash,other:Finanzen", "the deleted entry shows Trash", 20000).catch(e => {
+      throw new Error(e.message + ": " + describe());
+    });
+    `
+  );
+
+  await check(
+    "A copy a few bytes off is shown with a question mark",
+    client,
+    `
+    await until(() => cell("allMailPlusLocation", "All Mail", "close") == "Inbox?", "close copy shown").catch(e => {
+      throw new Error(e.message + ": " + cell("allMailPlusLocation", "All Mail", "close"));
+    });
+    const win = await select("close");
+    // Started after this script returns, as the question it opens would end the script.
+    win.setTimeout(() => win.commandController.doCommand("cmd_deleteMessage"), 300);
+    `
+  );
+  const closeText = await answerDialog("deleting it asks first, and No keeps it", client, false);
+  if (!/differs by a few bytes/.test(closeText)) {
+    results.push({ name: "the question explains the close copy", ok: false });
+    console.log("FAIL the question explains the close copy\n     " + closeText);
+  }
+
+  await check(
+    "after No nothing changed; deleting again and answering Yes moves it to Trash",
+    client,
+    `
+    await sleep(1000);
+    if (!has("Inbox", "close") || has("Trash", "close")) throw new Error("changed although declined");
+    const win = await select("close");
+    // Started after this script returns, as the question it opens would end the script.
+    win.setTimeout(() => win.commandController.doCommand("cmd_deleteMessage"), 300);
+    `
+  );
+  await answerDialog("the question appears again", client, true);
+
+  await check(
+    "the close copy is in Trash after Yes",
+    client,
+    `
+    await until(() => has("Trash", "close") && !has("Inbox", "close"), "close copy in Trash");
     `
   );
 
@@ -837,8 +898,9 @@ try {
     // The counts are fresh right after the repair: the copy really differs, so it is
     // reported as such and Inbox is not offered again.
     const notice = doc.getElementById("notice").textContent;
-    if (!notice.includes("1 before, 1 now") || !notice.includes("the copies still differ")) throw new Error(notice);
-    await until(() => !repairIn("Copy differs"), "no second offer for Inbox");
+    // (Repairing a local folder rereads its file, which can bring back deleted messages.)
+    if (!/1 before, [0-9]+ now/.test(notice) || !notice.includes("the copies still differ")) throw new Error(notice);
+    await until(() => !/Inbox/.test(repairIn("Copy differs")?.title ?? ""), "no second offer for Inbox");
     doc.getElementById("diagnosis").scrollIntoView();
     `
   );
@@ -910,7 +972,8 @@ try {
     const about = () => tabmail.currentAbout3Pane;
     await until(() => about()?.gFolder?.URI == folder("All Mail").URI && about().gDBView?.hdrForFirstSelectedMessage, "message shown");
     const id = about().gDBView.hdrForFirstSelectedMessage.messageId;
-    if (!["dup@test", "twin@test"].includes(id)) throw new Error("selected " + id);
+    // The local repair before can bring back "copy" as another ambiguous message.
+    if (!["dup@test", "twin@test", "copy@test"].includes(id)) throw new Error("selected " + id);
     tabmail.switchToTab(tabmail.tabInfo.find(t => t.mode.name == "contentTab"));
     `
   );
