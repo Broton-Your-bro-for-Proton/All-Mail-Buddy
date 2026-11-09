@@ -99,12 +99,18 @@
         <input id="checkIntervalMinutes" type="number" min="1" max="60" step="1">
       </label>
       <label class="row">
-        <input id="verifyOnServer" type="checkbox">
-        <span>
-          Check each message on the server before acting on it: delete, move, archive and junk (recommended; prevents
-          acting on the wrong message when Thunderbird's list of a folder is out of date)
-        </span>
+        <span>Check messages on the server</span>
+        <select id="verifyMode">
+          <option value="permanent">only before deleting for good (recommended)</option>
+          <option value="always">before every action</option>
+          <option value="never">never</option>
+        </select>
       </label>
+      <p class="muted">
+        The check makes sure the message Thunderbird acts on is really the one on the server, in case Thunderbird's
+        list of a folder is out of date. It takes a few seconds on Bridge. Moving, archiving and deleting into Trash
+        can be undone, so by default only deleting for good (Shift+Delete, deleting from Trash) is checked.
+      </p>
       <label class="row">
         <input id="dailyServerCheck" type="checkbox">
         <span>Check the server once a day when messages have no folder</span>

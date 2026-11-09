@@ -1112,7 +1112,7 @@ try {
   );
 
   await check(
-    "IMAP: delete checks the message on the server, then moves the real copy to Trash",
+    "IMAP: delete into Trash acts at once, without a server check",
     client,
     `
     const t = window.allMailPlusTest;
@@ -1125,12 +1125,12 @@ try {
     await until(() => win.gDBView.hdrForFirstSelectedMessage?.messageId == "bill@imap", "select bill");
     const searches = t.searches;
     win.commandController.doCommand("cmd_deleteMessage");
-    // A second press while the server is checked must not act twice.
+    // A second press while the action runs must not act twice.
     win.commandController.doCommand("cmd_deleteMessage");
-    if (!amNotice().includes("still being checked")) throw new Error("second press: " + amNotice());
+    if (!amNotice().includes("still running")) throw new Error("second press: " + amNotice());
     const inBox = (box, id) => t.daemon.getMailbox(box)._messages.some(m => t.idOf(m) == id + "@imap" && !m.flags.includes("\\\\Deleted"));
     await until(() => inBox("Trash", "bill") && !inBox("Folders/Finanzen", "bill"), "bill in Trash on the server", 30000);
-    if (t.searches == searches) throw new Error("the message was not checked on the server first");
+    if (t.searches != searches) throw new Error("a delete into Trash was checked on the server");
     await sleep(1000);
     const copies = t.daemon.getMailbox("Trash")._messages.filter(m => t.idOf(m) == "bill@imap").length;
     if (copies != 1) throw new Error(copies + " copies in Trash");
@@ -1138,7 +1138,7 @@ try {
   );
 
   await check(
-    "IMAP: an action is refused when the server holds another message under that number",
+    "IMAP: deleting for good is checked on the server and refused when the number holds another message",
     client,
     `
     const t = window.allMailPlusTest;
@@ -1150,12 +1150,14 @@ try {
     const win = await showImap("All Mail");
     win.threadTree.selectedIndex = win.gDBView.findIndexOfMsgHdr(ihdr("All Mail", "shop"), true);
     await until(() => win.gDBView.hdrForFirstSelectedMessage?.messageId == "shop@imap", "select shop");
-    win.commandController.doCommand("cmd_moveMessage", ifolder("Folders/Finanzen"));
+    const searches = t.searches;
+    win.commandController.doCommand("cmd_shiftDeleteMessage");
     await until(() => amNotice().includes("changed on the server since Thunderbird last loaded it"), "refusal notice", 30000).catch(e => {
       throw new Error(e.message + ": " + amNotice());
     });
     const inBox = (box, id) => t.daemon.getMailbox(box)._messages.some(m => t.idOf(m) == id + "@imap" && !m.flags.includes("\\\\Deleted"));
-    if (!inBox("Folders/Shops", "other") || inBox("Folders/Finanzen", "other")) throw new Error("the other message was moved");
+    if (t.searches == searches) throw new Error("no server check before deleting for good");
+    if (!inBox("Folders/Shops", "other")) throw new Error("the other message was deleted");
     `
   );
 
