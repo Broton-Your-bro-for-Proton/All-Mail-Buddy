@@ -106,19 +106,23 @@ const M = {
   junkstay: message("junkstay", "Junk without move"),
   sized: message("sized", "Size differs"),
   dup: message("dup", "Listed twice"),
+  pair: message("pair", "Duplicate in one folder"),
 };
 // Same Message-ID and date, different body: another message, not a copy.
-const sizedOther = M.sized.replace("Body of Size differs.", "A longer body that changes the size.");
+const sizedOther = M.sized.replace(
+  "Body of Size differs.",
+  "A much longer body that changes the size by clearly more than the tolerated few bytes."
+);
 
 const layout = {
-  "All Mail": Object.values(M).filter(m => m != M.native),
+  "All Mail": [...Object.values(M).filter(m => m != M.native), M.pair],
   Inbox: [M.hello, M.meeting, M.spam, M.twin, M.drag, M.label, M.native, M.tab, M.junkstay, sizedOther],
   Sent: [M.twin],
   Spam: [M.restore],
   Trash: [],
   Archive: [],
   Folders: [],
-  "Folders.sbd/Finanzen": [M.invoice, M.row, M.dup],
+  "Folders.sbd/Finanzen": [M.invoice, M.row, M.dup, M.pair, M.pair],
   "Folders.sbd/Shops": [M.order, M.copy, M.dup],
   Labels: [],
   "Labels.sbd/Wichtig": [M.invoice],
@@ -632,6 +636,31 @@ try {
     });
     `,
     addon
+  );
+
+  await check(
+    "Duplicates within one folder are paired and deleted one copy at a time",
+    client,
+    `
+    const copies = p => [...folder(p).messages].filter(h => h.messageId == "pair@test" && !(h.flags & Ci.nsMsgMessageFlags.Expunged)).length;
+    if (copies("Folders/Finanzen") != 2 || copies("All Mail") != 2) throw new Error("setup: " + copies("Folders/Finanzen") + "/" + copies("All Mail"));
+    await until(() => cell("allMailPlusLocation", "All Mail", "pair") == "Finanzen", "pair resolves");
+    const win = await select("pair");
+    win.commandController.doCommand("cmd_deleteMessage");
+    await until(() => copies("Trash") >= 1, "one copy in Trash");
+    await sleep(1000);
+    if (copies("Trash") != 1 || copies("Folders/Finanzen") != 1) {
+      throw new Error("Trash " + copies("Trash") + ", Finanzen " + copies("Folders/Finanzen") + ", notice " + amNotice());
+    }
+    // Now one copy is in Trash and one in Finanzen: each All Mail entry shows its own.
+    const shown = [...folder("All Mail").messages].filter(h => h.messageId == "pair@test")
+      .map(h => ThreadPaneColumns.getColumn("allMailPlusLocation").handler.getCellText(h)).sort();
+    await until(() => {
+      const now = [...folder("All Mail").messages].filter(h => h.messageId == "pair@test")
+        .map(h => ThreadPaneColumns.getColumn("allMailPlusLocation").handler.getCellText(h)).sort();
+      return now.join() == "Finanzen,Trash";
+    }, "each entry shows its own folder", 20000).catch(e => { throw new Error(e.message + ": " + shown.join()); });
+    `
   );
 
   await check(

@@ -508,6 +508,7 @@ const controller = {
       }
       return sent.get(uri);
     };
+    const twins = new Map(); // Message-ID and date -> All Mail entries that match several copies
     const remember = (map, uri, entry) => {
       const list = map.get(uri) ?? [];
       if (list.length < 50) {
@@ -535,12 +536,12 @@ const controller = {
           }
         }
         if (result.status == "ambiguous") {
-          // Proton really keeps a message you sent to yourself twice; a repair cannot change that.
-          if (result.matches.some(m => isSent(m.uri))) {
-            selfSent++;
-          } else {
-            result.matches.forEach(m => remember(doubled, m.uri, entry));
-          }
+          // Copies of one message: paired up below when the counts agree.
+          const group = core.twinKey(entry);
+          const twin = twins.get(group) ?? { keys: [], entries: [], matches: core.sortedMatches(result) };
+          twin.keys.push(keys[i]);
+          twin.entries.push(entry);
+          twins.set(group, twin);
         }
         if (result.status == "missing") {
           count(coverage.reasons, result.reason);
@@ -555,6 +556,28 @@ const controller = {
         }
       }
     } catch {}
+    // As many identical copies as All Mail entries, for example a duplicate or a message
+    // sent to yourself: pair them in key order. They are the same message, so which
+    // copy goes with which entry does not matter; the column and actions agree on it.
+    const paired = new Map();
+    for (const [group, twin] of twins) {
+      if (twin.keys.length == twin.matches.length) {
+        const sorted = [...twin.keys].sort((a, b) => a - b);
+        paired.set(group, sorted);
+        coverage.ambiguous -= sorted.length;
+        coverage.unique += sorted.length;
+        sorted.forEach((key, i) =>
+          byKey.set(key, { status: "unique", location: account.index.folders.get(twin.matches[i].uri).name })
+        );
+      } else if (twin.matches.some(m => isSent(m.uri))) {
+        // Proton keeps a message you sent to yourself twice; a repair cannot change that.
+        selfSent += twin.keys.length;
+      } else {
+        // Counts disagree, so a folder list is out of date: offer a repair.
+        twin.entries.forEach(entry => twin.matches.forEach(m => remember(doubled, m.uri, entry)));
+      }
+    }
+    account.paired = paired;
     const state = this.checkState();
     const fixable = [...differing.keys()].filter(uri => !core.knownUnfixable(state.unfixable[uri], Date.now()));
     coverage.differingFolders = fixable.length;
@@ -609,7 +632,7 @@ const controller = {
       const hdr = db.getMsgHdrForKey(keys[i]);
       const entry = this.entryOf(hdr);
       const result = account.index.resolve(entry);
-      if (result.status == "unique") {
+      if (result.status == "unique" || this.pairedMatch(account, hdr, result)) {
         continue;
       }
       let detail = "";
@@ -1415,6 +1438,10 @@ const controller = {
       return null;
     }
     const result = account.index.resolve(this.entryOf(hdr));
+    const paired = this.pairedMatch(account, hdr, result);
+    if (paired) {
+      return { account, text: account.index.folders.get(paired.uri).name, status: "unique" };
+    }
     return { account, text: this.locationLabel(account, result), status: result.status };
   },
 
@@ -1753,19 +1780,34 @@ const controller = {
     return false;
   },
 
+  /** For copies that were paired up with their All Mail entries, the copy that goes with this entry. */
+  pairedMatch(account, hdr, result) {
+    if (result.status != "ambiguous") {
+      return null;
+    }
+    const keys = account.paired?.get(core.twinKey(this.entryOf(hdr)));
+    const rank = keys ? keys.indexOf(hdr.messageKey) : -1;
+    if (rank < 0 || keys.length != result.matches.length) {
+      return null;
+    }
+    return core.sortedMatches(result)[rank];
+  },
+
   verifiedMatch(account, hdr) {
     const entry = this.entryOf(hdr);
     const result = account.index.resolve(entry);
-    if (account.state == "indexing" || result.status != "unique") {
+    const match = result.status == "unique" ? result.matches[0] : this.pairedMatch(account, hdr, result);
+    if (account.state == "indexing" || !match) {
       return null;
     }
-    const [{ uri, key }] = result.matches;
+    const { uri, key } = match;
+    const sizeOk = result.near ? core.nearSize : core.sameSize;
     const folder = MailServices.folderLookup.getFolderForURL(uri);
     try {
       const real = folder.msgDatabase.getMsgHdrForKey(key);
       if (
         real.messageId == entry.id &&
-        core.sameSize(real.messageSize, entry.size) &&
+        sizeOk(real.messageSize, entry.size) &&
         real.date == entry.date &&
         !(real.flags & Ci.nsMsgMessageFlags.IMAPDeleted)
       ) {

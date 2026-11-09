@@ -55,7 +55,18 @@ on the settings page does it on demand, for example after Thunderbird was
 offline for a long time.
 
 Copies of the same message may differ by up to 2 bytes in Thunderbird's stored
-size, which is tolerated. The status page lists why the remaining messages have
+size, which is tolerated. When no copy matches that closely, a copy with the
+same Message-ID and date that is at most 32 bytes off counts as the message:
+some old messages are served a few bytes differently per folder, and a repair
+does not change that.
+
+Proton can hold the same message more than once, for example a duplicate in one
+folder or a message you sent to yourself (once in Sent, once in Inbox). All Mail
+then shows one entry per copy. When the number of All Mail entries and copies
+agree, the add-on pairs them in a fixed order: each entry shows the folder of
+its copy and actions act on that copy. As the copies are identical, which
+entry gets which copy does not matter. When the numbers disagree, a folder list
+is out of date and the messages stay "ambiguous" until it is synced or repaired. The status page lists why the remaining messages have
 no match and shows a few examples to look up in Proton.
 
 ## How actions work
