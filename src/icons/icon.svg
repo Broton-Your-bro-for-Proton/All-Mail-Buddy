@@ -11,7 +11,7 @@
   <g filter="url(#glow)">
     <rect x="3.5" y="8.5" width="57" height="41" rx="7" fill="#191e25" stroke="#f6e6b8" stroke-width="5.5"/>
     <path d="M9 15l23 16 23-16" fill="none" stroke="#f6e6b8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="45" cy="44" r="18" fill="#f6e6b8" stroke="#191e25" stroke-width="3"/>
-    <path d="M45 34v20M35 44h20" stroke="#191e25" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="49" cy="49" r="14" fill="#f6e6b8" stroke="#191e25" stroke-width="3"/>
+    <path d="M49 41.5v15M41.5 49h15" stroke="#191e25" stroke-width="6" stroke-linecap="round"/>
   </g>
 </svg>
