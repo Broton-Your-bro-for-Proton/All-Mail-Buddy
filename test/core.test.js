@@ -67,7 +67,7 @@ test("treats copies with another size or date as different messages", () => {
   const index = sampleIndex();
   assert.equal(index.resolve({ id: "self@x", size: 1, date: 1 }).status, "missing");
   // A single candidate is not enough: it must match size and date too.
-  assert.equal(index.resolve({ id: "a@x", size: 110, date: 5 }).status, "missing");
+  assert.equal(index.resolve({ id: "a@x", size: 200, date: 5 }).status, "missing");
   assert.equal(index.resolve({ id: "a@x", size: 100, date: 6 }).status, "missing");
   assert.deepEqual(index.resolve({ id: "b@x", size: 200, date: 7 }).labels, []);
 });
@@ -78,12 +78,12 @@ test("explains why a message has no match", () => {
   const reason = msg => index.resolve(msg).reason;
   assert.equal(reason({ id: "nope@x", size: 1, date: 1 }), "no-copy");
   assert.equal(reason({ id: "labelonly@x", size: 1, date: 1 }), "label-only");
-  assert.equal(reason({ id: "a@x", size: 90, date: 5 }), "size");
+  assert.equal(reason({ id: "a@x", size: 40, date: 5 }), "size");
   assert.equal(reason({ id: "a@x", size: 100, date: 9 }), "date");
-  assert.equal(reason({ id: "a@x", size: 90, date: 9 }), "size-date");
+  assert.equal(reason({ id: "a@x", size: 40, date: 9 }), "size-date");
   assert.equal(reason({ id: "a@x", size: 100, date: 5 }), "");
   assert.deepEqual(
-    index.resolve({ id: "a@x", size: 90, date: 5 }).candidates.map(c => c.uri),
+    index.resolve({ id: "a@x", size: 40, date: 5 }).candidates.map(c => c.uri),
     ["inbox"]
   );
 });
@@ -93,7 +93,7 @@ test("names folders that may be out of date", () => {
   const { staleUris } = require("../src/lib/core.js");
   assert.deepEqual(staleUris(index.resolve({ id: "b@x", size: 200, date: 6 })), []);
   assert.deepEqual(staleUris(index.resolve({ id: "twin@x", size: 400, date: 8 })).sort(), ["inbox2", "sent"]);
-  assert.deepEqual(staleUris(index.resolve({ id: "a@x", size: 90, date: 5 })), ["inbox"]);
+  assert.deepEqual(staleUris(index.resolve({ id: "a@x", size: 40, date: 5 })), ["inbox"]);
   assert.deepEqual(staleUris(index.resolve({ id: "nope@x", size: 1, date: 1 })), []);
 });
 
@@ -101,7 +101,57 @@ test("tolerates the 2 byte size difference Thunderbird introduces", () => {
   const index = sampleIndex();
   assert.equal(index.resolve({ id: "a@x", size: 102, date: 5 }).status, "unique");
   assert.equal(index.resolve({ id: "a@x", size: 98, date: 5 }).status, "unique");
+  assert.deepEqual(index.resolve({ id: "a@x", size: 102, date: 5 }).close, []);
+  // Beyond 2 bytes it is no match, only a close copy.
   assert.equal(index.resolve({ id: "a@x", size: 103, date: 5 }).reason, "size");
+  assert.equal(index.resolve({ id: "a@x", size: 103, date: 5 }).close.length, 1);
+});
+
+test("a copy a few bytes off with the same date is only close, not a match", () => {
+  const index = sampleIndex();
+  const near = index.resolve({ id: "a@x", size: 117, date: 5 });
+  assert.equal(near.status, "missing");
+  assert.deepEqual(near.close.map(c => c.uri), ["inbox"]);
+  assert.deepEqual(index.resolve({ id: "a@x", size: 100, date: 5 }).close, []);
+  // More than 32 bytes, or another date, is not even close.
+  assert.deepEqual(index.resolve({ id: "a@x", size: 140, date: 5 }).close, []);
+  assert.deepEqual(index.resolve({ id: "a@x", size: 110, date: 6 }).close, []);
+});
+
+test("pairs entries with copies and keeps an entry with the folder it was sent to", () => {
+  const { pairCopies } = require("../src/lib/core.js");
+  const copies = [{ uri: "finanzen", key: 4 }, { uri: "trash", key: 7 }];
+  const plain = pairCopies([10, 11], copies);
+  assert.equal(plain.get(10).uri, "finanzen");
+  assert.equal(plain.get(11).uri, "trash");
+  // Entry 10 was deleted: it keeps showing Trash, the other one the folder.
+  const hinted = pairCopies([10, 11], copies, new Map([[10, "trash"]]));
+  assert.equal(hinted.get(10).uri, "trash");
+  assert.equal(hinted.get(11).uri, "finanzen");
+  // A hint for a folder without a free copy is ignored.
+  const stale = pairCopies([10, 11], copies, new Map([[10, "gone"]]));
+  assert.equal(stale.get(10).uri, "finanzen");
+});
+
+test("orders copies stably for pairing", () => {
+  const { sortedMatches, twinKey } = require("../src/lib/core.js");
+  const index = new LocationIndex();
+  index.setFolder("paypal", { kind: "real", name: "Paypal" }, [
+    { key: 4, id: "dup@x", size: 10, date: 1 },
+    { key: 9, id: "dup@x", size: 10, date: 1 },
+  ]);
+  index.setFolder("sent", { kind: "real", name: "Sent" }, [{ key: 2, id: "self@x", size: 5, date: 1 }]);
+  index.setFolder("inbox", { kind: "real", name: "Inbox" }, [{ key: 3, id: "self@x", size: 5, date: 1 }]);
+  const dup = index.resolve({ id: "dup@x", size: 10, date: 1 });
+  assert.equal(dup.status, "ambiguous");
+  assert.equal(dup.location, "Paypal");
+  assert.deepEqual(sortedMatches(dup.matches).map(m => m.key), [4, 9]);
+  assert.deepEqual(
+    sortedMatches(index.resolve({ id: "self@x", size: 5, date: 1 }).matches).map(m => m.uri),
+    ["inbox", "sent"]
+  );
+  assert.equal(twinKey({ id: "dup@x", date: 1 }), twinKey({ id: "dup@x", date: 1, size: 99 }));
+  assert.notEqual(twinKey({ id: "dup@x", date: 1 }), twinKey({ id: "dup@x", date: 2 }));
 });
 
 test("decides which folders need a sync after STATUS", () => {
