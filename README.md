@@ -1,6 +1,6 @@
 # All Mail Buddy
 
-Formerly "All Mail+". Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
+Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
 
 * shows the real folder of every message (cards view: a badge on the card,
   table view: the columns **Folder** and **Labels**, in German **Ordner** and
