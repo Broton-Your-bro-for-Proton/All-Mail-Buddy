@@ -992,7 +992,7 @@ try {
     `
     const tabmail = window.document.getElementById("tabmail");
     const shown = () => tabmail.currentAbout3Pane?.gFolder;
-    await until(() => shown()?.getFlag(Ci.nsMsgFolderFlags.Virtual) && shown().name == "No folder (All Mail Buddy)", "saved search shown");
+    await until(() => shown()?.getFlag(Ci.nsMsgFolderFlags.Virtual) && shown().name == "No folder (AMB)", "saved search shown");
     if (shown().parent != root()) throw new Error("created in " + shown().parent.name);
     `
   );
