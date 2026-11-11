@@ -1419,7 +1419,7 @@ const controller = {
    * once per account, next to All Mail, and is a local folder only.
    */
   openNoFolderSearch() {
-    const name = `${this.config.columnNames?.noFolder || "No folder"} (All Mail Buddy)`;
+    const name = `${this.config.columnNames?.noFolder || "No folder"} (AMB)`;
     let shown = null;
     for (const account of this.accounts.values()) {
       const folder =
