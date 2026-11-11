@@ -266,3 +266,10 @@ test("runs the server check at most daily and only when needed", () => {
   assert.equal(serverCheckDue({ enabled: true, nofolder: 0, last: 0, now }), false);
   assert.equal(serverCheckDue({ enabled: false, nofolder: 5, last: 0, now }), false);
 });
+
+test("a message new since the last count is not yet without folder", () => {
+  const { searchStatus } = require("../src/lib/core.js");
+  assert.equal(searchStatus("nofolder", true), "");
+  assert.equal(searchStatus("unique", true), "unique");
+  assert.equal(searchStatus("nofolder", false), "nofolder");
+});

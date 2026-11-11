@@ -281,8 +281,18 @@ var AllMailCore = (() => {
     return !auto || !repairedAt || now - repairedAt >= 7 * DAY;
   }
 
+  /**
+   * Status the search term reports for an All Mail entry. A message that arrived after
+   * the last count has no confirmed status yet; its copy in a real folder may still be
+   * on the way, so it does not count as without folder until the next count says so.
+   */
+  function searchStatus(fresh, counted) {
+    return counted && fresh == "nofolder" ? "" : fresh;
+  }
+
   return {
     mayRepair,
+    searchStatus,
     repairedRecently,
     knownUnfixable,
     isBridgeRoot,

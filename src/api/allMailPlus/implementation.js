@@ -1406,6 +1406,11 @@ const controller = {
     if (!info || info.account.state == "indexing" || info.account.state == "error") {
       return { text: "", status: "" };
     }
+    // New in All Mail since the last count: its Inbox copy may not be indexed yet.
+    const counted = account && hdr.folder.URI == account.allMailURI && !!account.statusByKey;
+    if (core.searchStatus(info.status, counted) != info.status) {
+      return { text: "", status: "" };
+    }
     return { text: info.text, status: info.status };
   },
 
