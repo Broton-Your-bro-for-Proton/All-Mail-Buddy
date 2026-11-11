@@ -1,4 +1,12 @@
+<p align="center"><img src="src/icons/icon.svg" alt="icon" width="128"></p>
+
 # All Mail Buddy for Proton
+
+**Act on the real folder of every message in Proton's All Mail view.**
+
+![Thunderbird](https://img.shields.io/badge/Thunderbird-153%2B-0A84FF)
+![Proton](https://img.shields.io/badge/Proton-Mail%20Bridge-6D4AFF)
+![Status](https://img.shields.io/badge/Status-test%20version-orange)
 
 Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
 
@@ -14,7 +22,7 @@ design and the matching rules are described in [PLAN.md](PLAN.md).
 
 Status: test version, built and tested against Thunderbird 153.6.
 
-## Install
+## 📦 Install
 
 1. `npm run build` creates `dist/allmail-buddy-<version>.xpi`.
 2. The add-on is not signed. Either load it temporarily via
@@ -26,7 +34,7 @@ Status: test version, built and tested against Thunderbird 153.6.
    detected Bridge accounts, the index state and how many All Mail messages
    were matched.
 
-## How matching works
+## 🔍 How matching works
 
 Bridge serves the same message in All Mail and in its real folder, so both share
 Message-ID, size and date. The add-on keeps an in-memory index of all real and
@@ -72,7 +80,7 @@ the folder its copy went to. When the numbers disagree, usually a folder list is
 out of date, and the messages stay "ambiguous" until it is synced or repaired. The status page lists why the remaining messages have
 no match and shows a few examples to look up in Proton.
 
-## How actions work
+## 🎯 How actions work
 
 * **Check on the server first.** Before deleting for good (Shift+Delete, or
   deleting a copy that is in Trash), the add-on asks the server with one IMAP
@@ -99,7 +107,7 @@ no match and shows a few examples to look up in Proton.
 * Moving into All Mail, or into the containers "Folders" and "Labels", is
   refused with a notice.
 
-## Messages without a folder
+## 📭 Messages without a folder
 
 Proton can hold a message in All Mail only, with no folder at all. This happens
 for example when an IMAP client moves a message to a local folder: the client
@@ -121,7 +129,7 @@ loaded from the server since Thunderbird started (by a sync, the change check
 or opening it) and could be read; until then the column shows "..." for them
 and actions on them are refused with a notice.
 
-## Finding the affected messages
+## 🔎 Finding the affected messages
 
 *Open saved search "No folder"* on the settings page creates a saved search
 next to All Mail (once per account, local only) and opens it. It lists every
@@ -150,7 +158,7 @@ folder's message list and downloads its offline copies again. If the
 difference stays afterwards, the copies really differ (or All Mail itself is
 out of date) and the add-on keeps refusing actions on them.
 
-## Server check
+## 🖥️ Server check
 
 A message can also look folderless because Thunderbird's local list of its real
 folder no longer matches the server, for example after Bridge assigned new
@@ -183,14 +191,14 @@ The settings page shows the problems as a table. *Show all affected messages*
 lists every All Mail message without exactly one matching copy, with date,
 sender, subject, problem and details, and can be filtered by problem.
 
-## Junk
+## 🗑️ Junk
 
 Marking as junk follows Thunderbird's own setting under *Settings > Privacy &
 Security > Junk*: when "move to the Junk folder" is enabled for manual marking,
 the real message moves to Bridge's Spam folder. Not junk moves a message from
 Spam back to the Inbox.
 
-## Diagnostics
+## 🩺 Diagnostics
 
 *Record diagnostics* in the settings logs how long the add-on's work takes,
 when Thunderbird finishes loading Bridge folders, how long the search
@@ -199,7 +207,7 @@ for more than 0.3 seconds, together with the add-on work running then. The
 log stays on the computer; *Copy log* puts it on the clipboard for a bug
 report.
 
-## Development
+## 🛠️ Development
 
 ```
 npm test                    # unit tests (node:test)
@@ -220,7 +228,7 @@ a Thunderbird that is installed on the machine. Another binary can be passed as
 the first argument or via `TB_BINARY`. `E2E_SCREENSHOTS=<dir>` stores
 screenshots of the cards view, the table view and the settings page.
 
-## Manual check with a real Bridge account
+## 🧪 Manual check with a real Bridge account
 
 The end-to-end test simulates the Bridge layout on Local Folders, and over
 real IMAP with the fake server: the Folder column, the STATUS based sync, the
@@ -238,7 +246,7 @@ on the add-on with real mail, check once with Bridge running:
 6. Run *Check server now* and compare the repaired folders with Proton's web
    app; run *List server folders missing in Thunderbird* once.
 
-## Limits
+## 🚧 Limits
 
 * Actions are refused while the index is being built, and when a real copy
   with the same Message-ID exists but none matches its size and date. The
