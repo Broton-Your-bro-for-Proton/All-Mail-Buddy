@@ -56,6 +56,12 @@ body {
   color: inherit;
 }
 
+.support-link::before {
+  display: inline-block;
+  margin-right: 0.35em;
+  content: "☕";
+}
+
 main {
   max-width: 980px;
   margin: 0 auto;
