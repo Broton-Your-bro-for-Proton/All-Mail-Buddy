@@ -261,4 +261,8 @@ on the add-on with real mail, check once with Bridge running:
 * Thunderbird internals change between versions, so the add-on requires
   Thunderbird 153 or later and should be re-tested after major updates.
 
+## 📄 License
+
+Licensed under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`). See [`LICENSE`](LICENSE).
+
 ☕ If Broton saves you time, you can [support the project on Ko-fi](https://ko-fi.com/hypercrisis).

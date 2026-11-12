@@ -9,5 +9,5 @@
     "setup:thunderbird": "node scripts/fetch-thunderbird.mjs",
     "build": "node scripts/build.mjs"
   },
-  "license": "MPL-2.0"
+  "license": "AGPL-3.0-only"
 }
