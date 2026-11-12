@@ -47,6 +47,15 @@ body {
   color: var(--aio-muted);
 }
 
+.page-footer {
+  margin-top: 24px;
+  font-size: 12px;
+}
+
+.support-link {
+  color: inherit;
+}
+
 main {
   max-width: 980px;
   margin: 0 auto;
