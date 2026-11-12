@@ -260,3 +260,5 @@ on the add-on with real mail, check once with Bridge running:
   change to `lib/searchTerm.sys.mjs` itself needs a Thunderbird restart.
 * Thunderbird internals change between versions, so the add-on requires
   Thunderbird 153 or later and should be re-tested after major updates.
+
+If Broton saves you time, you can [support the project on Ko-fi](https://ko-fi.com/hypercrisis).
