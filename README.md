@@ -6,7 +6,7 @@
 
 ![Thunderbird](https://img.shields.io/badge/Thunderbird-153%2B-0A84FF)
 ![Proton](https://img.shields.io/badge/Proton-Mail%20Bridge-6D4AFF)
-![Status](https://img.shields.io/badge/Status-test%20version-orange)
+![Status](https://img.shields.io/badge/Status-stable-brightgreen)
 
 Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder it
 
@@ -20,7 +20,7 @@ Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder i
 Every other folder and account keeps Thunderbird's native behavior. Feasibility,
 design and the matching rules are described in [PLAN.md](PLAN.md).
 
-Status: test version, built and tested against Thunderbird 153.6.
+Built and tested against Thunderbird 153.6.
 
 ## 📦 Install
 
