@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "For Proton Mail Bridge: shows the real folder and labels of every message in All Mail and makes delete, move, archive and junk act on the message in its real folder.",
+  "description": "Proton Mail Bridge shows every message in the <b>All Mail</b> folder, but there you cannot see where a message really lives, and deleting or moving it does not do what you expect. All Mail Buddy fixes that.\n\n<b>Features</b>\n<ul>\n<li><b>Real folder at a glance:</b> the columns <b>Folder</b> and <b>Labels</b> in the table view, a badge on each card in the cards view.</li>\n<li><b>Actions on the real message:</b> Delete, Shift+Delete, Move, Copy, Archive, Junk, Not junk, drag and drop and the row buttons act on the message in its real folder, not on the All Mail view of it.</li>\n<li><b>Safe by design:</b> a message is only acted on when exactly one real copy matches. Before deleting for good, the add-on checks on the server that the copy is still the right message.</li>\n<li><b>Messages without a folder:</b> finds messages that exist only in All Mail and lets you file, archive or delete them, also all at once through a saved search.</li>\n<li><b>Stays in sync:</b> a light check every few minutes notices changes made in other Proton apps and syncs only the folders that changed.</li>\n<li><b>Diagnosis:</b> the settings page explains each problem in plain words and offers a repair of exactly the affected folders.</li>\n</ul>\n\nEvery other folder and account keeps Thunderbird's normal behavior. The add-on talks only to your local Bridge, through Thunderbird's own IMAP connection.\n\nRequires Thunderbird 153 or later and Proton Mail Bridge.\n\nNot affiliated with Proton AG.",
+  "releaseNotes": "First version on addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail with the Folder and Labels columns"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "The cards view shows the real folder as a badge"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Settings with status, server check and diagnosis"
+    }
+  ]
+}

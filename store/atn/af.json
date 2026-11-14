@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Vir Proton Mail Bridge: wys die regte vouer en etikette van elke boodskap in All Mail en laat vee uit, skuif, argiveer en gemors optree op die boodskap in sy regte vouer.",
+  "description": "Proton Mail Bridge wys elke boodskap in die <b>All Mail</b>-vouer, maar daar kan jy nie sien waar 'n boodskap werklik is nie, en om dit uit te vee of te skuif doen nie wat jy verwag nie. All Mail Buddy los dit op.\n\n<b>Kenmerke</b>\n<ul>\n<li><b>Regte vouer in een oogopslag:</b> die kolomme <b>Folder</b> en <b>Labels</b> in die tabelaansig, 'n kenteken op elke kaart in die kaartaansig.</li>\n<li><b>Aksies op die regte boodskap:</b> Vee uit, Shift+Delete, Skuif, Kopieer, Argiveer, Gemors, Nie gemors nie, sleep-en-los en die ry-knoppies tree op die boodskap in sy regte vouer op, nie op sy aansig in All Mail nie.</li>\n<li><b>Veilig by ontwerp:</b> daar word slegs op 'n boodskap opgetree wanneer presies een regte kopie ooreenstem. Voordat dit vir goed uitvee, kontroleer die byvoeging op die bediener dat die kopie steeds die regte boodskap is.</li>\n<li><b>Boodskappe sonder vouer:</b> vind boodskappe wat net in All Mail bestaan en laat jou toe om dit in 'n vouer te plaas, te argiveer of uit te vee, ook almal gelyk deur 'n gestoorde soektog.</li>\n<li><b>Bly gesinchroniseer:</b> 'n ligte kontrole elke paar minute merk veranderinge in ander Proton-toepassings op en sinchroniseer slegs die vouers wat verander het.</li>\n<li><b>Diagnose:</b> die instellingsbladsy verduidelik elke probleem in gewone woorde en bied herstel van presies die geaffekteerde vouers aan.</li>\n</ul>\n\nElke ander vouer en rekening behou Thunderbird se normale gedrag. Die byvoeging praat slegs met jou plaaslike Bridge, deur Thunderbird se eie IMAP-verbinding.\n\nVereis Thunderbird 153 of later en Proton Mail Bridge.\n\nNie geaffilieer met Proton AG nie.",
+  "releaseNotes": "Eerste weergawe op addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail met die kolomme Folder en Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Die kaartaansig wys die regte vouer as 'n kenteken"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Instellings met status, bedienerkontrole en diagnose"
+    }
+  ]
+}

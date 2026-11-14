@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Za Proton Mail Bridge: pokazuje woprawdźity rjadowak a znamjenja kóždeje powěsće w All Mail a zaruči, zo zhašenje, přesunjenje, archiwowanje a spam na powěsć w jeje woprawdźitym rjadowaku skutkuja.",
+  "description": "Proton Mail Bridge pokazuje kóždu powěsć w rjadowaku <b>All Mail</b>, ale tam njewidźiće, hdźe powěsć woprawdźe je, a jeje zhašenje abo přesunjenje nječčini, štož wočakujeće. All Mail Buddy to porjedźi.\n\n<b>Funkcije</b>\n<ul>\n<li><b>Woprawdźity rjadowak na prěnje pohlada:</b> špalće <b>Folder</b> a <b>Labels</b> w tabelowym napohledźe, plaketka na kóždej karće w napohledźe kartow.</li>\n<li><b>Akcije na woprawdźitej powěsći:</b> Zhašeć, Shift+Delete, Přesunyć, Kopěrować, Archiwować, Spam, Njespam, ćahanje a pušćenje kaž tež tłóčatka w rjadkach skutkuja na powěsć w jeje woprawdźitym rjadowaku, nic na jeje zwobraznjenje w All Mail.</li>\n<li><b>Wěsty po designje:</b> akcija so jenož wuwjedźe, hdyž runje jedna woprawdźita kopija wotpowěduje. Před trajnym zhašenjom dodawk na serwerje kontroluje, hač kopija je hišće prawa powěsć.</li>\n<li><b>Powěsće bjez rjadowaka:</b> namaka powěsće, kotrež su jenož w All Mail, a dowola wam, je do rjadowakow zaryzować, archiwować abo zhašeć, tež wšě naraz přez składowane pytanje.</li>\n<li><b>Wostanje synchronizowany:</b> lochka kontrola kóžde někotre mjeńšiny zhoni změny w druhich nałoženjach Proton a synchronizuje jenož rjadowaki, kotrež su so změnili.</li>\n<li><b>Diagnoza:</b> strona nastajenjow wujasni kóždy problem z jednorymi słowami a poskići porjedźenje runje potrjechenych rjadowakow.</li>\n</ul>\n\nKóždy druhi rjadowak a kóžde druhe konto wobchowa normalne zadźerženje Thunderbirda. Dodawk komunikuje jenož z wašim lokalnym Bridge, přez swójsku IMAP-zwjazbu Thunderbirda.\n\nŽada sej Thunderbird 153 abo nowši a Proton Mail Bridge.\n\nŽane zwjazanje z Proton AG.",
+  "releaseNotes": "Prěnja wersija na addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail ze špalcemi Folder a Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Napohlad kartow pokazuje woprawdźity rjadowak jako plaketku"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Nastajenja ze stawom, kontrolu serwera a diagnozu"
+    }
+  ]
+}

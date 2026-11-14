@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Pour Proton Mail Bridge : affiche le vrai dossier et les labels de chaque message de All Mail et fait agir supprimer, déplacer, archiver et indésirable sur le message dans son vrai dossier.",
+  "description": "Proton Mail Bridge affiche tous les messages dans le dossier <b>All Mail</b>, mais on ne peut pas y voir où se trouve réellement un message, et le supprimer ou le déplacer ne fait pas ce qu'on attend. All Mail Buddy corrige cela.\n\n<b>Fonctionnalités</b>\n<ul>\n<li><b>Le vrai dossier d'un coup d'œil:</b> les colonnes <b>Folder</b> et <b>Labels</b> dans la vue tableau, un badge sur chaque carte dans la vue cartes.</li>\n<li><b>Actions sur le vrai message:</b> Supprimer, Maj+Suppr, Déplacer, Copier, Archiver, Indésirable, Non indésirable, le glisser-déposer et les boutons de ligne agissent sur le message dans son vrai dossier, pas sur sa vue dans All Mail.</li>\n<li><b>Sûr par conception:</b> un message n'est traité que si exactement une copie réelle correspond. Avant une suppression définitive, le module vérifie sur le serveur que la copie est bien le bon message.</li>\n<li><b>Messages sans dossier:</b> trouve les messages qui n'existent que dans All Mail et vous permet de les classer, de les archiver ou de les supprimer, aussi en une seule fois via une recherche enregistrée.</li>\n<li><b>Reste synchronisé:</b> une vérification légère toutes les quelques minutes détecte les changements faits dans d'autres applications Proton et ne synchronise que les dossiers modifiés.</li>\n<li><b>Diagnostic:</b> la page des paramètres explique chaque problème en termes simples et propose une réparation des seuls dossiers concernés.</li>\n</ul>\n\nTous les autres dossiers et comptes gardent le comportement normal de Thunderbird. Le module ne communique qu'avec votre Bridge local, via la connexion IMAP propre à Thunderbird.\n\nNécessite Thunderbird 153 ou plus récent et Proton Mail Bridge.\n\nSans affiliation avec Proton AG.",
+  "releaseNotes": "Première version sur addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail avec les colonnes Folder et Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "La vue cartes affiche le vrai dossier sous forme de badge"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Paramètres avec état, vérification du serveur et diagnostic"
+    }
+  ]
+}

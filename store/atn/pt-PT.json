@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Para o Proton Mail Bridge: mostra a pasta real e as etiquetas de cada mensagem em All Mail e faz com que eliminar, mover, arquivar e lixo eletrónico atuem sobre a mensagem na sua pasta real.",
+  "description": "O Proton Mail Bridge mostra todas as mensagens na pasta <b>All Mail</b>, mas aí não se vê onde a mensagem realmente está, e eliminá-la ou movê-la não faz o que se espera. O All Mail Buddy resolve isso.\n\n<b>Funcionalidades</b>\n<ul>\n<li><b>Pasta real num relance:</b> as colunas <b>Folder</b> e <b>Labels</b> na vista de tabela e um distintivo em cada cartão na vista de cartões.</li>\n<li><b>Ações sobre a mensagem real:</b> Eliminar, Shift+Delete, Mover, Copiar, Arquivar, Lixo eletrónico, Não é lixo eletrónico, arrastar e largar e os botões da linha atuam sobre a mensagem na sua pasta real, não sobre a sua vista em All Mail.</li>\n<li><b>Seguro por conceção:</b> só se atua sobre uma mensagem quando corresponde exatamente uma cópia real. Antes de eliminar definitivamente, o suplemento verifica no servidor se a cópia ainda é a mensagem certa.</li>\n<li><b>Mensagens sem pasta:</b> encontra mensagens que existem apenas em All Mail e permite arquivá-las, guardá-las numa pasta ou eliminá-las, também todas de uma vez através de uma pesquisa guardada.</li>\n<li><b>Mantém-se sincronizado:</b> uma verificação leve de poucos em poucos minutos deteta alterações feitas noutras aplicações Proton e sincroniza apenas as pastas que mudaram.</li>\n<li><b>Diagnóstico:</b> a página de definições explica cada problema em palavras simples e oferece a reparação exata das pastas afetadas.</li>\n</ul>\n\nTodas as outras pastas e contas mantêm o comportamento normal do Thunderbird. O suplemento comunica apenas com o seu Bridge local, através da própria ligação IMAP do Thunderbird.\n\nRequer o Thunderbird 153 ou posterior e o Proton Mail Bridge.\n\nSem afiliação com a Proton AG.",
+  "releaseNotes": "Primeira versão em addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail com as colunas Folder e Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "A vista de cartões mostra a pasta real como distintivo"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Definições com estado, verificação do servidor e diagnóstico"
+    }
+  ]
+}

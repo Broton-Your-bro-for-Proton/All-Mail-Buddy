@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Proton Mail Bridge 用。All Mail 内のすべてのメッセージの実際のフォルダーとラベル(Labels)を表示し、削除・移動・アーカイブ・迷惑メールの操作を実際のフォルダー内のメッセージに適用します。",
+  "description": "Proton Mail Bridge はすべてのメッセージを <b>All Mail</b> フォルダーに表示しますが、そこではメッセージが実際にどこにあるのか分からず、削除や移動も期待どおりに動きません。All Mail Buddy がこの問題を解決します。\n\n<b>機能</b>\n<ul>\n<li><b>実際のフォルダーが一目で分かる:</b> テーブル表示には <b>Folder</b> 列と <b>Labels</b> 列、カード表示には各カードにバッジを表示します。</li>\n<li><b>実際のメッセージに対する操作:</b> Delete、Shift+Delete、Move、Copy、Archive、Junk、Not junk、ドラッグ&ドロップ、行のボタンは、All Mail 表示上のメッセージではなく、実際のフォルダー内のメッセージに作用します。</li>\n<li><b>安全を前提とした設計:</b> 一致する実体がちょうど1つのときだけ操作を行います。完全に削除する前に、そのコピーがまだ正しいメッセージであることをアドオンがサーバーで確認します。</li>\n<li><b>フォルダーのないメッセージ:</b> All Mail にしか存在しないメッセージを見つけ、フォルダーへの振り分け、アーカイブ、削除ができます。保存済みの検索を使えば一括処理も可能です。</li>\n<li><b>常に同期:</b> 数分ごとの軽いチェックで他の Proton アプリでの変更を検知し、変更のあったフォルダーだけを同期します。</li>\n<li><b>診断:</b> 設定ページが各問題を分かりやすい言葉で説明し、影響のあるフォルダーだけを修復する方法を提示します。</li>\n</ul>\n\nそれ以外のフォルダーやアカウントは Thunderbird の通常の動作のままです。アドオンが通信するのは、Thunderbird 自身の IMAP 接続を通じたローカルの Bridge だけです。\n\nThunderbird 153 以降と Proton Mail Bridge が必要です。\n\nProton AG とは無関係です。",
+  "releaseNotes": "addons.thunderbird.net での最初のバージョンです。",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "Folder 列と Labels 列を表示した All Mail"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "カード表示では実際のフォルダーをバッジで表示します"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "ステータス、サーバーチェック、診断を備えた設定画面"
+    }
+  ]
+}

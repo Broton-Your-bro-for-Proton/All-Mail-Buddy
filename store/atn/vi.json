@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Dành cho Proton Mail Bridge: hiển thị thư mục và nhãn thật của mọi thư trong All Mail, và làm cho xóa, di chuyển, lưu trữ và thư rác tác động lên thư trong thư mục thật của nó.",
+  "description": "Proton Mail Bridge hiển thị mọi thư trong thư mục <b>All Mail</b>, nhưng ở đó bạn không thấy được thư thực sự nằm đâu, và việc xóa hay di chuyển không cho kết quả như bạn mong đợi. All Mail Buddy khắc phục điều này.\n\n<b>Tính năng</b>\n<ul>\n<li><b>Thư mục thật trong nháy mắt:</b> các cột <b>Folder</b> và <b>Labels</b> trong dạng xem bảng, một huy hiệu trên mỗi thẻ trong dạng xem thẻ.</li>\n<li><b>Thao tác trên thư thật:</b> Xóa, Shift+Delete, Di chuyển, Sao chép, Lưu trữ, Thư rác, Không phải thư rác, kéo và thả cùng các nút trên hàng đều tác động lên thư trong thư mục thật của nó, không phải lên bản hiển thị trong All Mail.</li>\n<li><b>An toàn từ thiết kế:</b> chỉ thao tác trên thư khi có đúng một bản sao thật khớp. Trước khi xóa vĩnh viễn, tiện ích kiểm tra trên máy chủ rằng bản sao đó vẫn đúng là thư cần xóa.</li>\n<li><b>Thư không có thư mục:</b> tìm các thư chỉ tồn tại trong All Mail và cho phép bạn xếp vào thư mục, lưu trữ hoặc xóa, kể cả tất cả cùng lúc thông qua một tìm kiếm đã lưu.</li>\n<li><b>Luôn đồng bộ:</b> một lần kiểm tra nhẹ vài phút một lần phát hiện thay đổi từ các ứng dụng Proton khác và chỉ đồng bộ những thư mục đã thay đổi.</li>\n<li><b>Chẩn đoán:</b> trang cài đặt giải thích từng vấn đề bằng lời đơn giản và đề nghị sửa chữa đúng những thư mục bị ảnh hưởng.</li>\n</ul>\n\nMọi thư mục và tài khoản khác giữ nguyên cách hoạt động thông thường của Thunderbird. Tiện ích chỉ trao đổi với Bridge cục bộ của bạn, qua kết nối IMAP riêng của Thunderbird.\n\nYêu cầu Thunderbird 153 trở lên và Proton Mail Bridge.\n\nKhông liên kết với Proton AG.",
+  "releaseNotes": "Phiên bản đầu tiên trên addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail với các cột Folder và Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Dạng xem thẻ hiển thị thư mục thật dưới dạng huy hiệu"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Cài đặt với trạng thái, kiểm tra máy chủ và chẩn đoán"
+    }
+  ]
+}

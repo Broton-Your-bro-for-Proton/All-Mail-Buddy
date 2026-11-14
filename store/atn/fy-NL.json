@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Foar Proton Mail Bridge: toant de echte map en labels fan elk berjocht yn All Mail en lit wiskje, ferpleatse, argivearje en spam wurkje op it berjocht yn syn echte map.",
+  "description": "Proton Mail Bridge toant elk berjocht yn de map <b>All Mail</b>, mar dêr sjogge jo net wêr't in berjocht echt stiet, en wiskje of ferpleatse docht net wat jo ferwachtsje. All Mail Buddy lost dat op.\n\n<b>Funksjes</b>\n<ul>\n<li><b>Echte map yn ien eachopslach:</b> de kolommen <b>Folder</b> en <b>Labels</b> yn de tabelwerjefte, in badge op elke kaart yn de kaartwerjefte.</li>\n<li><b>Aksjes op it echte berjocht:</b> Wiskje, Shift+Delete, Ferpleatse, Kopiearje, Argivearje, Spam, Gjin spam, slepe en delsette en de rigeknoppen wurkje op it berjocht yn syn echte map, net op de werjefte dêrfan yn All Mail.</li>\n<li><b>Feilich troch ûntwerp:</b> der wurdt allinnich op in berjocht hannele as krekt ien echte kopy oerienkomt. Foardat de add-on foar goed wiskt, kontrolearret er op de tsjinner oft de kopy noch it juste berjocht is.</li>\n<li><b>Berjochten sûnder map:</b> fynt berjochten dy't allinnich yn All Mail bestean en lit jo se yndiele, argivearje of wiskje, ek allegear tagelyk fia in bewarre sykopdracht.</li>\n<li><b>Bliuwt syngronisearre:</b> in lichte kontrôle om de pear minuten merkt wizigingen yn oare Proton-apps op en syngronisearret allinnich de mappen dy't wizige binne.</li>\n<li><b>Diagnoaze:</b> de ynstellingenside lit elk probleem yn gewoane wurden sjen en biedt herstel fan krekt de belutsen mappen.</li>\n</ul>\n\nElke oare map en elk oar account hâldt it normale gedrach fan Thunderbird. De add-on praat allinnich mei jo lokale Bridge, fia de eigen IMAP-ferbining fan Thunderbird.\n\nFereasket Thunderbird 153 of nijer en Proton Mail Bridge.\n\nNet ferbûn oan Proton AG.",
+  "releaseNotes": "Earste ferzje op addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail mei de kolommen Folder en Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "De kaartwerjefte toant de echte map as badge"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Ynstellingen mei status, tsjinnerkontrôle en diagnoaze"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Za Proton Mail Bridge: pokazujo napšawdny zarědnik a toflicki kuždeje powěsći w All Mail a zarucyjo, až lašowanje, pśesuwanje, archiwěrowanje a spam na powěsć w jeje napšawdnem zarědniku źěłaju.",
+  "description": "Proton Mail Bridge pokazujo kuždu powěsć w zarědniku <b>All Mail</b>, ale tam njewiźiśo, źo powěsć napšawdu jo, a jeje lašowanje abo pśesuwanje njewó to, což wócakujośo. All Mail Buddy to porědujo.\n\n<b>Funkcije</b>\n<ul>\n<li><b>Napšawdny zarědnik na prědne wiźenje:</b> słupy <b>Folder</b> a <b>Labels</b> w tabelowem naglěźe, plaketka na kuždej kórśe w naglěźe kórtow.</li>\n<li><b>Akcije na napšawdnej powěsći:</b> Lašowaś, Shift+Delete, Pśesunuś, Kopěrowaś, Archiwěrowaś, Spam, Njespam, śěgnjenje a spušćanje kaž teke tłocaški w rědach źěłaju na powěsć w jeje napšawdnem zarědniku, nic na jeje zwobraznjenje w All Mail.</li>\n<li><b>Wěsty pó designje:</b> akcija se jano wuwjeźo, gaž pśecywno jadna napšawdna kopija wótpowědujo. Pśed trajnym lašowanim dodank na serwerje kontrolěrujo, lěc kopija jo hyšći pšawa powěsć.</li>\n<li><b>Powěsći bźez zarědnika:</b> namakajo powěsći, kótarež su jano w All Mail, a dowólujo wam, je do zarědnikow zarědowaś, archiwěrowaś abo lašowaś, teke wše naraz pśez składowane pytanje.</li>\n<li><b>Wóstanjo synchronizěrowany:</b> lažka kontrola kužde někotare minuty zawóznajo změny w drugich nałožowanjach Proton a synchronizěrujo jano zarědniki, kótarež su se změnili.</li>\n<li><b>Diagnoza:</b> bok nastajenjow wujasni kuždy problem z jadnorymi słowami a pósćijo porědowanje rowno tych zarědnikow, kótarež su pótrjefjone.</li>\n</ul>\n\nKuždy drugi zarědnik a kužde druge konto wobchowajo normalne zachopowanje Thunderbirda. Dodank komunikěrujo jano z wašym lokalnym Bridge, pśez swójske IMAP-zwězanje Thunderbirda.\n\nPominujo Thunderbird 153 abo nowšy a Proton Mail Bridge.\n\nŽedno zwězanje z Proton AG.",
+  "releaseNotes": "Prědna wersija na addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail ze słupami Folder a Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Naglěźe kórtow pokazujo napšawdny zarědnik ako plaketku"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Nastajenja ze stawom, kontrolu serwera a diagnozu"
+    }
+  ]
+}

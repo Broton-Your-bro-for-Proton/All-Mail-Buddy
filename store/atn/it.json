@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Per Proton Mail Bridge: mostra la cartella reale e le etichette di ogni messaggio in All Mail e fa agire elimina, sposta, archivia e posta indesiderata sul messaggio nella sua cartella reale.",
+  "description": "Proton Mail Bridge mostra ogni messaggio nella cartella <b>All Mail</b>, ma lì non si vede dove si trovi davvero un messaggio, ed eliminarlo o spostarlo non fa ciò che ci si aspetta. All Mail Buddy risolve il problema.\n\n<b>Funzionalità</b>\n<ul>\n<li><b>Cartella reale a colpo d'occhio:</b> le colonne <b>Folder</b> e <b>Labels</b> nella vista tabella, un badge su ogni scheda nella vista a schede.</li>\n<li><b>Azioni sul messaggio reale:</b> Elimina, Maiusc+Canc, Sposta, Copia, Archivia, Indesiderata, Non indesiderata, trascinamento e pulsanti di riga agiscono sul messaggio nella sua cartella reale, non sulla sua vista in All Mail.</li>\n<li><b>Sicuro per progetto:</b> si agisce su un messaggio solo quando corrisponde esattamente una copia reale. Prima di un'eliminazione definitiva, il componente aggiuntivo verifica sul server che la copia sia ancora il messaggio giusto.</li>\n<li><b>Messaggi senza cartella:</b> trova i messaggi che esistono solo in All Mail e ti permette di archiviarli, classificarli o eliminarli, anche tutti insieme tramite una ricerca salvata.</li>\n<li><b>Resta sincronizzato:</b> un controllo leggero ogni pochi minuti rileva le modifiche fatte in altre app Proton e sincronizza solo le cartelle cambiate.</li>\n<li><b>Diagnosi:</b> la pagina delle impostazioni spiega ogni problema in parole semplici e offre la riparazione esatta delle cartelle interessate.</li>\n</ul>\n\nTutte le altre cartelle e gli altri account mantengono il comportamento normale di Thunderbird. Il componente aggiuntivo comunica solo con il tuo Bridge locale, tramite la connessione IMAP di Thunderbird.\n\nRichiede Thunderbird 153 o successivo e Proton Mail Bridge.\n\nNon affiliato a Proton AG.",
+  "releaseNotes": "Prima versione su addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail con le colonne Folder e Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "La vista a schede mostra la cartella reale come badge"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Impostazioni con stato, controllo del server e diagnosi"
+    }
+  ]
+}

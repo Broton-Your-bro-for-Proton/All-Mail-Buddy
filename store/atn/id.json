@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Untuk Proton Mail Bridge: menampilkan folder dan label asli dari setiap pesan di All Mail, dan membuat hapus, pindah, arsip, dan spam bekerja pada pesan di folder aslinya.",
+  "description": "Proton Mail Bridge menampilkan setiap pesan di folder <b>All Mail</b>, tetapi di sana Anda tidak bisa melihat di mana pesan sebenarnya berada, dan menghapus atau memindahkannya tidak melakukan yang Anda harapkan. All Mail Buddy memperbaikinya.\n\n<b>Fitur</b>\n<ul>\n<li><b>Folder asli sekilas pandang:</b> kolom <b>Folder</b> dan <b>Labels</b> di tampilan tabel, lencana pada setiap kartu di tampilan kartu.</li>\n<li><b>Tindakan pada pesan asli:</b> Hapus, Shift+Delete, Pindahkan, Salin, Arsipkan, Spam, Bukan spam, seret dan lepas, serta tombol di baris bekerja pada pesan di folder aslinya, bukan pada tampilan All Mail darinya.</li>\n<li><b>Aman sejak desain:</b> pesan hanya diproses bila tepat satu salinan asli yang cocok. Sebelum menghapus permanen, pengaya memeriksa di server bahwa salinan itu masih pesan yang benar.</li>\n<li><b>Pesan tanpa folder:</b> menemukan pesan yang hanya ada di All Mail dan memungkinkan Anda memasukkannya ke folder, mengarsipkan, atau menghapusnya, juga sekaligus semuanya melalui pencarian tersimpan.</li>\n<li><b>Tetap sinkron:</b> pemeriksaan ringan setiap beberapa menit mendeteksi perubahan yang dibuat di aplikasi Proton lain dan hanya menyinkronkan folder yang berubah.</li>\n<li><b>Diagnosis:</b> halaman pengaturan menjelaskan setiap masalah dengan bahasa sederhana dan menawarkan perbaikan khusus untuk folder yang terdampak.</li>\n</ul>\n\nSetiap folder dan akun lain tetap memakai perilaku normal Thunderbird. Pengaya hanya berkomunikasi dengan Bridge lokal Anda, melalui koneksi IMAP milik Thunderbird sendiri.\n\nMemerlukan Thunderbird 153 atau lebih baru dan Proton Mail Bridge.\n\nTidak berafiliasi dengan Proton AG.",
+  "releaseNotes": "Versi pertama di addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail dengan kolom Folder dan Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Tampilan kartu menampilkan folder asli sebagai lencana"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Pengaturan dengan status, pemeriksaan server, dan diagnosis"
+    }
+  ]
+}

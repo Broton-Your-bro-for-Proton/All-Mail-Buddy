@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Per a Proton Mail Bridge: mostra la carpeta real i les etiquetes de cada missatge de All Mail i fa que suprimir, moure, arxivar i correu brossa actuïn sobre el missatge a la seva carpeta real.",
+  "description": "Proton Mail Bridge mostra tots els missatges a la carpeta <b>All Mail</b>, però allà no es veu on és realment un missatge, i suprimir-lo o moure'l no fa el que esperes. All Mail Buddy ho soluciona.\n\n<b>Característiques</b>\n<ul>\n<li><b>La carpeta real d'un cop d'ull:</b> les columnes <b>Folder</b> i <b>Labels</b> a la vista de taula i una insígnia a cada targeta a la vista de targetes.</li>\n<li><b>Accions sobre el missatge real:</b> Suprimeix, Maj+Supr, Mou, Copia, Arxiva, Correu brossa, No és correu brossa, arrossegar i deixar anar i els botons de fila actuen sobre el missatge a la seva carpeta real, no sobre la seva vista a All Mail.</li>\n<li><b>Segur per disseny:</b> només s'actua sobre un missatge quan coincideix exactament una còpia real. Abans de suprimir definitivament, el complement comprova al servidor que la còpia continua sent el missatge correcte.</li>\n<li><b>Missatges sense carpeta:</b> troba els missatges que només existeixen a All Mail i et permet desar-los en una carpeta, arxivar-los o suprimir-los, també tots alhora amb una cerca desada.</li>\n<li><b>Es manté sincronitzat:</b> una comprovació lleugera cada pocs minuts detecta els canvis fets en altres aplicacions de Proton i només sincronitza les carpetes que han canviat.</li>\n<li><b>Diagnòstic:</b> la pàgina de configuració explica cada problema amb paraules clares i ofereix reparar exactament les carpetes afectades.</li>\n</ul>\n\nTotes les altres carpetes i comptes mantenen el comportament normal del Thunderbird. El complement només es comunica amb el teu Bridge local, mitjançant la connexió IMAP del mateix Thunderbird.\n\nRequereix Thunderbird 153 o posterior i Proton Mail Bridge.\n\nSense afiliació amb Proton AG.",
+  "releaseNotes": "Primera versió a addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail amb les columnes Folder i Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "La vista de targetes mostra la carpeta real com a insígnia"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Configuració amb estat, comprovació del servidor i diagnòstic"
+    }
+  ]
+}

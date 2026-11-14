@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Pre Proton Mail Bridge: ukazuje skutočný priečinok a štítky každej správy v priečinku All Mail a zabezpečí, že mazanie, presun, archivácia a nevyžiadaná pošta pôsobia na správu v jej skutočnom priečinku.",
+  "description": "Proton Mail Bridge zobrazuje každú správu v priečinku <b>All Mail</b>, ale nevidíte tam, kde správa skutočne leží, a jej zmazanie alebo presun nerobí to, čo očakávate. All Mail Buddy to opravuje.\n\n<b>Funkcie</b>\n<ul>\n<li><b>Skutočný priečinok na prvý pohľad:</b> stĺpce <b>Folder</b> a <b>Labels</b> v zobrazení tabuľky, odznak na každej karte v zobrazení kariet.</li>\n<li><b>Akcie na skutočnej správe:</b> Odstrániť, Shift+Delete, Presunúť, Kopírovať, Archivovať, Nevyžiadaná pošta, Nie je nevyžiadaná, presun myšou aj tlačidlá v riadkoch pôsobia na správu v jej skutočnom priečinku, nie na jej zobrazenie v All Mail.</li>\n<li><b>Bezpečné už od návrhu:</b> akcia sa vykoná len vtedy, keď zodpovedá práve jedna skutočná kópia. Pred trvalým zmazaním doplnok na serveri overí, že kópia je stále tá správna správa.</li>\n<li><b>Správy bez priečinka:</b> nájde správy, ktoré existujú iba v All Mail, a umožní ich zaradiť do priečinkov, archivovať alebo zmazať, aj všetky naraz cez uložené vyhľadávanie.</li>\n<li><b>Zostáva synchronizované:</b> ľahká kontrola každých pár minút zaznamená zmeny vykonané v iných aplikáciách Proton a synchronizuje len priečinky, ktoré sa zmenili.</li>\n<li><b>Diagnostika:</b> stránka nastavení vysvetlí každý problém jednoduchými slovami a ponúkne opravu presne tých priečinkov, ktorých sa týka.</li>\n</ul>\n\nVšetky ostatné priečinky a účty si zachovajú bežné správanie Thunderbirdu. Doplnok komunikuje len s vaším miestnym Bridge, cez vlastné pripojenie IMAP Thunderbirdu.\n\nVyžaduje Thunderbird 153 alebo novší a Proton Mail Bridge.\n\nBez spojenia so spoločnosťou Proton AG.",
+  "releaseNotes": "Prvá verzia na addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail so stĺpcami Folder a Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Zobrazenie kariet ukazuje skutočný priečinok ako odznak"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Nastavenia so stavom, kontrolou servera a diagnostikou"
+    }
+  ]
+}

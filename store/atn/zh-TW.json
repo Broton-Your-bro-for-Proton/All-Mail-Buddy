@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "適用於 Proton Mail Bridge：顯示 All Mail 中每封郵件的真實資料夾和標籤（Labels），並讓刪除、移動、封存和垃圾郵件操作作用於郵件所在的真實資料夾。",
+  "description": "Proton Mail Bridge 會在 <b>All Mail</b> 資料夾中顯示所有郵件，但在那裡看不出郵件實際存放在哪裡，刪除或移動郵件也不會得到預期的結果。All Mail Buddy 解決了這個問題。\n\n<b>功能</b>\n<ul>\n<li><b>一眼看出真實資料夾：</b>表格檢視中有 <b>Folder</b> 和 <b>Labels</b> 欄，卡片檢視中每張卡片上有一個徽章。</li>\n<li><b>對真實郵件執行操作：</b>Delete、Shift+Delete、Move、Copy、Archive、Junk、Not junk、拖放以及列內按鈕，都作用於真實資料夾中的郵件，而不是 All Mail 檢視中的那一份。</li>\n<li><b>以安全為優先的設計：</b>只有在恰好有一份真實副本相符時，才會對郵件執行操作。永久刪除之前，附加元件會在伺服器上確認該副本仍是正確的郵件。</li>\n<li><b>沒有資料夾的郵件：</b>找出只存在於 All Mail 中的郵件，讓您歸入資料夾、封存或刪除，也可以透過已儲存的搜尋一次處理。</li>\n<li><b>保持同步：</b>每隔幾分鐘進行一次輕量檢查，發現在其他 Proton 應用程式中所做的變更，並只同步有變動的資料夾。</li>\n<li><b>診斷：</b>設定頁面用淺顯的文字說明每個問題，並只修復受影響的資料夾。</li>\n</ul>\n\n其他所有資料夾和帳號維持 Thunderbird 的正常行為。附加元件只與您本機的 Bridge 通訊，使用的是 Thunderbird 自己的 IMAP 連線。\n\n需要 Thunderbird 153 或更新版本以及 Proton Mail Bridge。\n\n與 Proton AG 無關。",
+  "releaseNotes": "addons.thunderbird.net 上的第一個版本。",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "含有 Folder 和 Labels 欄的 All Mail"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "卡片檢視以徽章顯示真實資料夾"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "包含狀態、伺服器檢查和診斷的設定頁面"
+    }
+  ]
+}

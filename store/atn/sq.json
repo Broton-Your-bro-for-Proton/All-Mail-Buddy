@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Për Proton Mail Bridge: tregon dosjen e vërtetë dhe etiketat e çdo mesazhi në All Mail dhe bën që fshirja, zhvendosja, arkivimi dhe mesazhet e padëshiruara të veprojnë mbi mesazhin në dosjen e tij të vërtetë.",
+  "description": "Proton Mail Bridge i tregon të gjitha mesazhet në dosjen <b>All Mail</b>, por aty nuk mund të shihet ku ndodhet në të vërtetë një mesazh, dhe fshirja ose zhvendosja e tij nuk bën atë që pret. All Mail Buddy e rregullon këtë.\n\n<b>Veçoritë</b>\n<ul>\n<li><b>Dosja e vërtetë me një shikim:</b> kolonat <b>Folder</b> dhe <b>Labels</b> në pamjen tabelë, një shenjë në çdo kartë në pamjen me karta.</li>\n<li><b>Veprime mbi mesazhin e vërtetë:</b> Fshi, Shift+Delete, Zhvendos, Kopjo, Arkivo, I padëshiruar, Jo i padëshiruar, tërhiqe dhe lëshoje dhe butonat e rreshtit veprojnë mbi mesazhin në dosjen e tij të vërtetë, jo mbi pamjen e tij në All Mail.</li>\n<li><b>I sigurt që nga dizajni:</b> mbi një mesazh veprohet vetëm kur përputhet saktësisht një kopje e vërtetë. Para se të fshijë përgjithmonë, shtesa kontrollon në server që kopja është ende mesazhi i duhur.</li>\n<li><b>Mesazhe pa dosje:</b> gjen mesazhet që ekzistojnë vetëm në All Mail dhe të lejon t'i vendosësh në dosje, t'i arkivosh ose t'i fshish, edhe të gjitha njëherësh përmes një kërkimi të ruajtur.</li>\n<li><b>Mbetet i sinkronizuar:</b> një kontroll i lehtë çdo disa minuta vëren ndryshimet e bëra në aplikacione të tjera të Proton dhe sinkronizon vetëm dosjet që kanë ndryshuar.</li>\n<li><b>Diagnostikim:</b> faqja e cilësimeve e shpjegon çdo problem me fjalë të thjeshta dhe ofron riparimin e saktë të dosjeve të prekura.</li>\n</ul>\n\nÇdo dosje dhe llogari tjetër e mban sjelljen normale të Thunderbird. Shtesa komunikon vetëm me Bridge-in tënd lokal, përmes lidhjes IMAP të vetë Thunderbird.\n\nKërkon Thunderbird 153 ose më të ri dhe Proton Mail Bridge.\n\nPa lidhje me Proton AG.",
+  "releaseNotes": "Versioni i parë në addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail me kolonat Folder dhe Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Pamja me karta e tregon dosjen e vërtetë si shenjë"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Cilësime me gjendjen, kontrollin e serverit dhe diagnostikimin"
+    }
+  ]
+}

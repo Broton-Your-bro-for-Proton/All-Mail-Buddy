@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Dla Proton Mail Bridge: pokazuje prawdziwy folder i etykiety każdej wiadomości w All Mail, a usuwanie, przenoszenie, archiwizowanie i oznaczanie jako spam działają na wiadomość w jej prawdziwym folderze.",
+  "description": "Proton Mail Bridge pokazuje każdą wiadomość w folderze <b>All Mail</b>, ale nie widać tam, gdzie wiadomość naprawdę się znajduje, a jej usunięcie lub przeniesienie nie robi tego, czego się spodziewasz. All Mail Buddy to naprawia.\n\n<b>Funkcje</b>\n<ul>\n<li><b>Prawdziwy folder na pierwszy rzut oka:</b> kolumny <b>Folder</b> i <b>Labels</b> w widoku tabeli, plakietka na każdej karcie w widoku kart.</li>\n<li><b>Działania na prawdziwej wiadomości:</b> Usuń, Shift+Delete, Przenieś, Kopiuj, Archiwizuj, Spam, Nie spam, przeciąganie i przyciski w wierszach działają na wiadomość w jej prawdziwym folderze, a nie na jej widok w All Mail.</li>\n<li><b>Bezpieczne z założenia:</b> działanie jest wykonywane tylko wtedy, gdy pasuje dokładnie jedna prawdziwa kopia. Przed trwałym usunięciem dodatek sprawdza na serwerze, że kopia nadal jest właściwą wiadomością.</li>\n<li><b>Wiadomości bez folderu:</b> znajduje wiadomości istniejące tylko w All Mail i pozwala je posegregować do folderów, zarchiwizować lub usunąć, także wszystkie naraz przez zapisane wyszukiwanie.</li>\n<li><b>Zawsze zsynchronizowane:</b> lekkie sprawdzenie co kilka minut wykrywa zmiany wprowadzone w innych aplikacjach Proton i synchronizuje tylko foldery, które się zmieniły.</li>\n<li><b>Diagnostyka:</b> strona ustawień wyjaśnia każdy problem prostymi słowami i oferuje naprawę dokładnie tych folderów, których dotyczy.</li>\n</ul>\n\nKażdy inny folder i konto zachowuje normalne działanie Thunderbirda. Dodatek komunikuje się wyłącznie z Twoim lokalnym Bridge, przez własne połączenie IMAP Thunderbirda.\n\nWymaga Thunderbirda 153 lub nowszego oraz Proton Mail Bridge.\n\nBrak powiązań z Proton AG.",
+  "releaseNotes": "Pierwsza wersja na addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail z kolumnami Folder i Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Widok kart pokazuje prawdziwy folder jako plakietkę"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Ustawienia ze stanem, sprawdzeniem serwera i diagnostyką"
+    }
+  ]
+}

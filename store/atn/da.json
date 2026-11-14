@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Til Proton Mail Bridge: viser den rigtige mappe og de rigtige etiketter for hver besked i All Mail og får slet, flyt, arkivér og spam til at virke på beskeden i dens rigtige mappe.",
+  "description": "Proton Mail Bridge viser alle beskeder i mappen <b>All Mail</b>, men dér kan du ikke se, hvor en besked egentlig ligger, og sletning eller flytning gør ikke det, du forventer. All Mail Buddy løser det.\n\n<b>Funktioner</b>\n<ul>\n<li><b>Den rigtige mappe med et blik:</b> kolonnerne <b>Folder</b> og <b>Labels</b> i tabelvisningen, et mærke på hvert kort i kortvisningen.</li>\n<li><b>Handlinger på den rigtige besked:</b> Slet, Shift+Delete, Flyt, Kopiér, Arkivér, Spam, Ikke spam, træk og slip og knapperne i rækken virker på beskeden i dens rigtige mappe, ikke på All Mail-visningen af den.</li>\n<li><b>Sikker fra grunden:</b> en besked behandles kun, når præcis én rigtig kopi passer. Før en endelig sletning kontrollerer tilføjelsen på serveren, at kopien stadig er den rigtige besked.</li>\n<li><b>Beskeder uden mappe:</b> finder beskeder, der kun findes i All Mail, og lader dig lægge dem i en mappe, arkivere eller slette dem, også alle på én gang via en gemt søgning.</li>\n<li><b>Holder sig synkroniseret:</b> et let tjek hvert par minutter opdager ændringer fra andre Proton-apps og synkroniserer kun de mapper, der er ændret.</li>\n<li><b>Diagnose:</b> indstillingssiden forklarer hvert problem i klare vendinger og tilbyder en reparation af netop de berørte mapper.</li>\n</ul>\n\nAlle andre mapper og konti beholder Thunderbirds normale adfærd. Tilføjelsen taler kun med din lokale Bridge via Thunderbirds egen IMAP-forbindelse.\n\nKræver Thunderbird 153 eller nyere og Proton Mail Bridge.\n\nIkke tilknyttet Proton AG.",
+  "releaseNotes": "Første version på addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail med kolonnerne Folder og Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Kortvisningen viser den rigtige mappe som et mærke"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Indstillinger med status, servertjek og diagnose"
+    }
+  ]
+}

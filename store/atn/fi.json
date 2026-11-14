@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Proton Mail Bridgelle: näyttää jokaisen All Mail -kansion viestin todellisen kansion ja tunnisteet sekä saa poiston, siirron, arkistoinnin ja roskapostin toimimaan viestiin sen todellisessa kansiossa.",
+  "description": "Proton Mail Bridge näyttää kaikki viestit <b>All Mail</b> -kansiossa, mutta siellä et näe, missä viesti todella sijaitsee, eikä sen poistaminen tai siirtäminen tee sitä, mitä odotat. All Mail Buddy korjaa tämän.\n\n<b>Ominaisuudet</b>\n<ul>\n<li><b>Todellinen kansio yhdellä silmäyksellä:</b> sarakkeet <b>Folder</b> ja <b>Labels</b> taulukkonäkymässä, merkki jokaisessa kortissa korttinäkymässä.</li>\n<li><b>Toiminnot todelliseen viestiin:</b> Poista, Shift+Delete, Siirrä, Kopioi, Arkistoi, Roskaposti, Ei roskapostia, vetäminen ja pudottaminen sekä rivin painikkeet toimivat viestiin sen todellisessa kansiossa, eivät sen All Mail -näkymään.</li>\n<li><b>Turvallinen jo suunnittelussa:</b> viestiin tartutaan vain, kun täsmälleen yksi todellinen kopio vastaa. Ennen lopullista poistoa lisäosa tarkistaa palvelimelta, että kopio on yhä oikea viesti.</li>\n<li><b>Viestit ilman kansiota:</b> löytää viestit, jotka ovat vain All Mail -kansiossa, ja antaa sinun lajitella, arkistoida tai poistaa ne, myös kaikki kerralla tallennetun haun kautta.</li>\n<li><b>Pysyy ajan tasalla:</b> kevyt tarkistus muutaman minuutin välein huomaa muutokset muissa Proton-sovelluksissa ja synkronoi vain muuttuneet kansiot.</li>\n<li><b>Vianmääritys:</b> asetussivu selittää jokaisen ongelman selkeästi ja tarjoaa täsmälleen kyseisten kansioiden korjauksen.</li>\n</ul>\n\nKaikki muut kansiot ja tilit toimivat Thunderbirdin tavalliseen tapaan. Lisäosa keskustelee vain paikallisen Bridgesi kanssa Thunderbirdin oman IMAP-yhteyden kautta.\n\nVaatii Thunderbird 153:n tai uudemman ja Proton Mail Bridgen.\n\nEi sidoksissa Proton AG:hen.",
+  "releaseNotes": "Ensimmäinen versio addons.thunderbird.net-sivustolla.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail sarakkeineen Folder ja Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Korttinäkymä näyttää todellisen kansion merkkinä"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Asetukset, joissa tila, palvelintarkistus ja vianmääritys"
+    }
+  ]
+}

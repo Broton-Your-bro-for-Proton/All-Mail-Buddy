@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Proton Mail Bridge üçün: All Mail-dəki hər mesajın real qovluğunu və etiketlərini göstərir, silmə, köçürmə, arxivləmə və spam əməliyyatlarını mesajın real qovluğundakı nüsxəsinə tətbiq edir.",
+  "description": "Proton Mail Bridge bütün mesajları <b>All Mail</b> qovluğunda göstərir, lakin orada mesajın əslində harada olduğunu görmək olmur, silmək və ya köçürmək də gözlədiyinizi etmir. All Mail Buddy bunu düzəldir.\n\n<b>Xüsusiyyətlər</b>\n<ul>\n<li><b>Real qovluq bir baxışda:</b> cədvəl görünüşündə <b>Folder</b> və <b>Labels</b> sütunları, kart görünüşündə hər kartda nişan.</li>\n<li><b>Real mesaj üzərində əməliyyatlar:</b> Sil, Shift+Delete, Köçür, Kopyala, Arxivlə, Spam, Spam deyil, sürüklə və burax və sətir düymələri mesajın All Mail görünüşünə yox, real qovluğundakı mesaja tətbiq olunur.</li>\n<li><b>Dizaynca təhlükəsiz:</b> mesaj üzərində yalnız dəqiq bir real nüsxə uyğun gəldikdə əməliyyat aparılır. Birdəfəlik silmədən əvvəl əlavə serverdə nüsxənin hələ də düzgün mesaj olduğunu yoxlayır.</li>\n<li><b>Qovluqsuz mesajlar:</b> yalnız All Mail-də olan mesajları tapır və onları qovluğa yerləşdirməyə, arxivləməyə və ya silməyə imkan verir, saxlanmış axtarış vasitəsilə hamısını birdən də.</li>\n<li><b>Sinxron qalır:</b> hər bir neçə dəqiqədən bir yüngül yoxlama digər Proton tətbiqlərində edilən dəyişiklikləri aşkarlayır və yalnız dəyişən qovluqları sinxronlaşdırır.</li>\n<li><b>Diaqnostika:</b> ayarlar səhifəsi hər problemi sadə sözlərlə izah edir və dəqiq təsirlənən qovluqların təmirini təklif edir.</li>\n</ul>\n\nBütün digər qovluqlar və hesablar Thunderbird-in normal davranışını saxlayır. Əlavə yalnız yerli Bridge ilə, Thunderbird-in öz IMAP bağlantısı vasitəsilə danışır.\n\nThunderbird 153 və ya daha yeni versiya və Proton Mail Bridge tələb olunur.\n\nProton AG ilə əlaqəsi yoxdur.",
+  "releaseNotes": "addons.thunderbird.net-də ilk versiya.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "Folder və Labels sütunları ilə All Mail"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Kart görünüşü real qovluğu nişan kimi göstərir"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Status, server yoxlaması və diaqnostika ilə ayarlar"
+    }
+  ]
+}
