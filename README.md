@@ -4,7 +4,7 @@
 
 **Act on the real folder of every message in Proton's All Mail view.**
 
-![Thunderbird](https://img.shields.io/badge/Thunderbird-153%2B-0A84FF)
+![Thunderbird](https://img.shields.io/badge/Thunderbird-153%20ESR-0A84FF)
 ![Proton](https://img.shields.io/badge/Proton-Mail%20Bridge-6D4AFF)
 ![Status](https://img.shields.io/badge/Status-stable-brightgreen)
 
@@ -259,7 +259,7 @@ on the add-on with real mail, check once with Bridge running:
 * The search criterion lives in a module that Thunderbird keeps loaded; a
   change to `lib/searchTerm.sys.mjs` itself needs a Thunderbird restart.
 * Thunderbird internals change between versions, so the add-on requires
-  Thunderbird 153 or later and should be re-tested after major updates.
+  Thunderbird 153 ESR and must be re-tested before the version limit is raised.
 
 ## 📄 License
 

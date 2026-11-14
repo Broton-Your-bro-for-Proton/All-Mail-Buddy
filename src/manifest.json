@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "All Mail Buddy for Proton",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "description": "Shows the real folder of every message in Proton Mail Bridge's All Mail folder and makes delete, move, archive and junk act on the real message.",
   "author": "HyperCriSiS",
   "homepage_url": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy",
@@ -9,7 +9,8 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "allmailplus@hypercrisis",
-      "strict_min_version": "153.0"
+      "strict_min_version": "153.0",
+      "strict_max_version": "153.*"
     }
   },
   "icons": { "64": "icons/icon.svg" },
