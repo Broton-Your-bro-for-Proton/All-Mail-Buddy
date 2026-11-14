@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Pentru Proton Mail Bridge: arată folderul real și etichetele fiecărui mesaj din All Mail și face ca ștergerea, mutarea, arhivarea și marcarea ca spam să acționeze asupra mesajului din folderul lui real.",
+  "description": "Proton Mail Bridge arată toate mesajele în folderul <b>All Mail</b>, dar acolo nu poți vedea unde se află de fapt un mesaj, iar ștergerea sau mutarea lui nu face ce te aștepți. All Mail Buddy rezolvă asta.\n\n<b>Funcționalități</b>\n<ul>\n<li><b>Folderul real dintr-o privire:</b> coloanele <b>Folder</b> și <b>Labels</b> în vizualizarea tabel și o insignă pe fiecare card în vizualizarea carduri.</li>\n<li><b>Acțiuni asupra mesajului real:</b> Ștergere, Shift+Delete, Mutare, Copiere, Arhivare, Spam, Nu este spam, tragere și plasare și butoanele de pe rând acționează asupra mesajului din folderul lui real, nu asupra vizualizării lui din All Mail.</li>\n<li><b>Sigur prin construcție:</b> se acționează asupra unui mesaj doar când se potrivește exact o copie reală. Înainte de o ștergere definitivă, extensia verifică pe server că este încă mesajul potrivit.</li>\n<li><b>Mesaje fără folder:</b> găsește mesajele care există doar în All Mail și îți permite să le muți într-un folder, să le arhivezi sau să le ștergi, și pe toate odată printr-o căutare salvată.</li>\n<li><b>Rămâne sincronizat:</b> o verificare ușoară la câteva minute observă modificările făcute în alte aplicații Proton și sincronizează doar folderele modificate.</li>\n<li><b>Diagnostic:</b> pagina de setări explică fiecare problemă în cuvinte simple și oferă repararea exactă a folderelor afectate.</li>\n</ul>\n\nToate celelalte foldere și conturi păstrează comportamentul normal al Thunderbird. Extensia comunică doar cu Bridge-ul tău local, prin conexiunea IMAP proprie a Thunderbird.\n\nNecesită Thunderbird 153 sau mai nou și Proton Mail Bridge.\n\nFără afiliere cu Proton AG.",
+  "releaseNotes": "Prima versiune pe addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail cu coloanele Folder și Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Vizualizarea carduri arată folderul real ca insignă"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Setări cu stare, verificarea serverului și diagnostic"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Voor Proton Mail Bridge: toont de echte map en labels van elk bericht in All Mail en laat verwijderen, verplaatsen, archiveren en spam werken op het bericht in zijn echte map.",
+  "description": "Proton Mail Bridge toont elk bericht in de map <b>All Mail</b>, maar daar zie je niet waar een bericht echt staat, en verwijderen of verplaatsen doet niet wat je verwacht. All Mail Buddy lost dat op.\n\n<b>Functies</b>\n<ul>\n<li><b>Echte map in één oogopslag:</b> de kolommen <b>Folder</b> en <b>Labels</b> in de tabelweergave, een badge op elke kaart in de kaartweergave.</li>\n<li><b>Acties op het echte bericht:</b> Verwijderen, Shift+Delete, Verplaatsen, Kopiëren, Archiveren, Spam, Geen spam, slepen en neerzetten en de rijknoppen werken op het bericht in zijn echte map, niet op de weergave ervan in All Mail.</li>\n<li><b>Veilig door ontwerp:</b> er wordt alleen op een bericht gehandeld als precies één echte kopie overeenkomt. Voordat de add-on definitief verwijdert, controleert hij op de server of de kopie nog het juiste bericht is.</li>\n<li><b>Berichten zonder map:</b> vindt berichten die alleen in All Mail bestaan en laat je ze indelen, archiveren of verwijderen, ook allemaal tegelijk via een opgeslagen zoekopdracht.</li>\n<li><b>Blijft gesynchroniseerd:</b> een lichte controle om de paar minuten merkt wijzigingen in andere Proton-apps op en synchroniseert alleen de mappen die zijn gewijzigd.</li>\n<li><b>Diagnose:</b> de instellingenpagina legt elk probleem in gewone woorden uit en biedt herstel van precies de betrokken mappen.</li>\n</ul>\n\nElke andere map en elk ander account behoudt het normale gedrag van Thunderbird. De add-on praat alleen met je lokale Bridge, via de eigen IMAP-verbinding van Thunderbird.\n\nVereist Thunderbird 153 of nieuwer en Proton Mail Bridge.\n\nNiet gelieerd aan Proton AG.",
+  "releaseNotes": "Eerste versie op addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail met de kolommen Folder en Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "De kaartweergave toont de echte map als badge"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Instellingen met status, servercontrole en diagnose"
+    }
+  ]
+}

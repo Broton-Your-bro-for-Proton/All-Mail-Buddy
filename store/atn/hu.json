@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Proton Mail Bridge-hez: megmutatja az All Mail minden üzenetének valódi mappáját és címkéit, és a törlés, áthelyezés, archiválás és levélszemét az üzenetre a valódi mappájában hat.",
+  "description": "A Proton Mail Bridge minden üzenetet megjelenít az <b>All Mail</b> mappában, de ott nem látszik, hogy az üzenet valójában hol van, és a törlése vagy áthelyezése nem azt teszi, amit vár. Az All Mail Buddy ezt javítja.\n\n<b>Funkciók</b>\n<ul>\n<li><b>A valódi mappa első pillantásra:</b> a <b>Folder</b> és <b>Labels</b> oszlopok a táblázatnézetben, egy jelvény minden kártyán a kártyanézetben.</li>\n<li><b>Műveletek a valódi üzeneten:</b> Törlés, Shift+Delete, Áthelyezés, Másolás, Archiválás, Levélszemét, Nem levélszemét, húzás és a sorokban lévő gombok az üzenetre a valódi mappájában hatnak, nem az All Mail-beli nézetére.</li>\n<li><b>Biztonságos már a tervezésben:</b> egy művelet csak akkor fut le, ha pontosan egy valódi másolat egyezik. Végleges törlés előtt a kiegészítő a szerveren ellenőrzi, hogy a másolat még mindig a megfelelő üzenet.</li>\n<li><b>Mappa nélküli üzenetek:</b> megtalálja azokat az üzeneteket, amelyek csak az All Mail mappában léteznek, és lehetővé teszi, hogy mappákba rendezze, archiválja vagy törölje őket, akár mindet egyszerre egy mentett kereséssel.</li>\n<li><b>Szinkronban marad:</b> néhány percenként egy könnyű ellenőrzés észreveszi a más Proton alkalmazásokban végzett változásokat, és csak a megváltozott mappákat szinkronizálja.</li>\n<li><b>Diagnosztika:</b> a beállítások oldal egyszerű szavakkal elmagyaráz minden problémát, és pontosan az érintett mappák javítását ajánlja fel.</li>\n</ul>\n\nMinden más mappa és fiók megtartja a Thunderbird szokásos viselkedését. A kiegészítő csak a helyi Bridge-dzsel kommunikál, a Thunderbird saját IMAP-kapcsolatán keresztül.\n\nThunderbird 153 vagy újabb és Proton Mail Bridge szükséges hozzá.\n\nNincs kapcsolatban a Proton AG-vel.",
+  "releaseNotes": "Első verzió az addons.thunderbird.net oldalon.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail a Folder és Labels oszlopokkal"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "A kártyanézet a valódi mappát jelvényként mutatja"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Beállítások állapottal, szerverellenőrzéssel és diagnosztikával"
+    }
+  ]
+}

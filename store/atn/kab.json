@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "I Proton Mail Bridge: yesskan akaram d tebzert tilawin n yal tabrat deg All Mail yerna yessebded kkes, smimeḍ, eǧǧ ɣer tazarkt, d spam ad xedmen ɣef tebrat deg ukaram-is ilawin.",
+  "description": "Proton Mail Bridge yesskan akk tibratin deg ukaram <b>All Mail</b>, maca dihin ur tezmireḍ ara ad twaliḍ anda i d-tella tebrat s tidet, yerna tukksa neɣ asmimeḍ ur xeddmen ara ayen i tettamnaḍ. All Mail Buddy yesseɣli-t.\n\n<b>Timahilin</b>\n<ul>\n<li><b>Akaram ilawin s tmuɣli kan:</b> tijadwal <b>Folder</b> d <b>Labels</b> deg tmuɣli n tfelwit, tafaṭṭ deg yal takarḍa deg tmuɣli n tkarḍiwin.</li>\n<li><b>Tigawt ɣef tebrat tilawit:</b> Kkes, Shift+Delete, Smimeḍ, Nɣel, Ɣer tazarkt, Spam, Mačči d spam, ger-d sers d tqeffalin n waddur ttxeddmen ɣef tebrat deg ukaram-is ilawin, mačči ɣef tmuɣli-ines n All Mail.</li>\n<li><b>Aɣelsan seg usdukkel:</b> tebrat tettwaxdem kan ma yella yiwen n unɣal ilawan yemṣada. Send tukksa i d-yettaǧǧan, asemmil yesnaqad deg uqeddac belli anɣal mazal d tabrat tameɣtut.</li>\n<li><b>Tibratin war akaram:</b> yufa tibratin i yellan kan deg All Mail yerna yeǧǧa-k ad tsekkiḍ, ad tesrekkseḍ neɣ ad tekkseḍ-tent, daɣen akk-d yiwen n unadi yettwaklasen.</li>\n<li><b>Yettqim yemtawa:</b> asenqed afessas yal kra n tesdidin yufa ibeddlen i yexdem deg yisnasen n Proton-nniḍen yerna yemtawa kan ikaramen i yettubeddlen.</li>\n<li><b>Asekyed:</b> asebter n yiɣewwaren yessefhem yal ugur s wawalen igerzen yerna yettak asewway n yikaramen i yettwaḥuzen kan.</li>\n</ul>\n\nIkaramen akk d yimiḍanen-nniḍen ad ɣren tikli tamagnut n Thunderbird. Asemmil yettmeslay kan d Bridge-ik adigan, s tuqqna IMAP n Thunderbird.\n\nYessewham Thunderbird 153 neɣ wayen i d-iteddun d Proton Mail Bridge.\n\nWar assaɣ ɣer Proton AG.",
+  "releaseNotes": "Lqem amezwaru deg addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail s tgejdiyin Folder d Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Tamuɣli n tkarḍiwin tesskan akaram ilawin d tafaṭṭ"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Iɣewwaren s waddad, usenqed n uqeddac d usekyed"
+    }
+  ]
+}

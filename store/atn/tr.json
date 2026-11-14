@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Proton Mail Bridge için: All Mail içindeki her iletinin gerçek klasörünü ve etiketlerini gösterir; sil, taşı, arşivle ve gereksiz işlemlerinin iletiye gerçek klasöründe uygulanmasını sağlar.",
+  "description": "Proton Mail Bridge her iletiyi <b>All Mail</b> klasöründe gösterir, ancak orada bir iletinin gerçekte nerede durduğunu göremezsiniz ve silmek ya da taşımak beklediğinizi yapmaz. All Mail Buddy bunu düzeltir.\n\n<b>Özellikler</b>\n<ul>\n<li><b>Gerçek klasör tek bakışta:</b> tablo görünümünde <b>Folder</b> ve <b>Labels</b> sütunları, kart görünümünde her kartta bir rozet.</li>\n<li><b>Gerçek ileti üzerinde işlemler:</b> Sil, Shift+Delete, Taşı, Kopyala, Arşivle, Gereksiz, Gereksiz değil, sürükle ve bırak ile satır düğmeleri, iletinin All Mail görünümüne değil, gerçek klasöründeki iletiye uygulanır.</li>\n<li><b>Tasarımdan güvenli:</b> bir iletiye yalnızca tam olarak bir gerçek kopya eşleştiğinde işlem yapılır. Kalıcı silmeden önce eklenti, kopyanın hâlâ doğru ileti olduğunu sunucuda denetler.</li>\n<li><b>Klasörsüz iletiler:</b> yalnızca All Mail içinde bulunan iletileri bulur ve bunları bir klasöre koymanıza, arşivlemenize veya silmenize olanak tanır; kayıtlı bir arama ile hepsini tek seferde de yapabilirsiniz.</li>\n<li><b>Eşitlenmiş kalır:</b> birkaç dakikada bir yapılan hafif bir denetim, diğer Proton uygulamalarında yapılan değişiklikleri fark eder ve yalnızca değişen klasörleri eşitler.</li>\n<li><b>Tanılama:</b> ayarlar sayfası her sorunu sade sözcüklerle açıklar ve yalnızca etkilenen klasörlerin onarımını sunar.</li>\n</ul>\n\nDiğer tüm klasörler ve hesaplar Thunderbird'ün normal davranışını korur. Eklenti yalnızca yerel Bridge'inizle, Thunderbird'ün kendi IMAP bağlantısı üzerinden konuşur.\n\nThunderbird 153 veya üstü ile Proton Mail Bridge gerektirir.\n\nProton AG ile bağlantılı değildir.",
+  "releaseNotes": "addons.thunderbird.net üzerindeki ilk sürüm.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "Folder ve Labels sütunlarıyla All Mail"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Kart görünümü gerçek klasörü rozet olarak gösterir"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Durum, sunucu denetimi ve tanılama içeren ayarlar"
+    }
+  ]
+}

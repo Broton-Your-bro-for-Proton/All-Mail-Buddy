@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Für Proton Mail Bridge: zeigt den echten Ordner und die Labels jeder Nachricht in All Mail und lässt Löschen, Verschieben, Archivieren und Junk auf die Nachricht in ihrem echten Ordner wirken.",
+  "description": "Proton Mail Bridge zeigt jede Nachricht im Ordner <b>All Mail</b>, aber dort siehst du nicht, wo eine Nachricht wirklich liegt, und Löschen oder Verschieben tut nicht, was du erwartest. All Mail Buddy behebt das.\n\n<b>Funktionen</b>\n<ul>\n<li><b>Echter Ordner auf einen Blick:</b> die Spalten <b>Ordner</b> und <b>Labels</b> in der Tabellenansicht, ein Abzeichen auf jeder Karte in der Kartenansicht.</li>\n<li><b>Aktionen auf der echten Nachricht:</b> Löschen, Umschalt+Entf, Verschieben, Kopieren, Archivieren, Junk, Kein Junk, Ziehen und Ablegen sowie die Schaltflächen in der Zeile wirken auf die Nachricht in ihrem echten Ordner, nicht auf ihre Ansicht in All Mail.</li>\n<li><b>Sicher gebaut:</b> eine Nachricht wird nur bearbeitet, wenn genau eine echte Kopie passt. Vor dem endgültigen Löschen prüft das Add-on auf dem Server, ob die Kopie noch die richtige Nachricht ist.</li>\n<li><b>Nachrichten ohne Ordner:</b> findet Nachrichten, die nur in All Mail liegen, und lässt dich sie einsortieren, archivieren oder löschen, auch alle auf einmal über eine gespeicherte Suche.</li>\n<li><b>Bleibt aktuell:</b> eine leichte Prüfung alle paar Minuten bemerkt Änderungen aus anderen Proton-Apps und synchronisiert nur die Ordner, die sich geändert haben.</li>\n<li><b>Diagnose:</b> die Einstellungsseite erklärt jedes Problem in klaren Worten und bietet eine Reparatur genau der betroffenen Ordner an.</li>\n</ul>\n\nAlle anderen Ordner und Konten verhalten sich wie gewohnt. Das Add-on spricht nur mit deiner lokalen Bridge, über Thunderbirds eigene IMAP-Verbindung.\n\nBenötigt Thunderbird 153 oder neuer und Proton Mail Bridge.\n\nKeine Verbindung zur Proton AG.",
+  "releaseNotes": "Erste Version auf addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail mit den Spalten Ordner und Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Die Kartenansicht zeigt den echten Ordner als Abzeichen"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Einstellungen mit Status, Serverprüfung und Diagnose"
+    }
+  ]
+}

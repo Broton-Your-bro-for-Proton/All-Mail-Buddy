@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Para Proton Mail Bridge: muestra la carpeta real y las etiquetas de cada mensaje de All Mail y hace que eliminar, mover, archivar y spam actúen sobre el mensaje en su carpeta real.",
+  "description": "Proton Mail Bridge muestra todos los mensajes en la carpeta <b>All Mail</b>, pero allí no se ve dónde está realmente un mensaje, y eliminarlo o moverlo no hace lo que esperas. All Mail Buddy lo soluciona.\n\n<b>Características</b>\n<ul>\n<li><b>La carpeta real de un vistazo:</b> las columnas <b>Folder</b> y <b>Labels</b> en la vista de tabla y una insignia en cada tarjeta en la vista de tarjetas.</li>\n<li><b>Acciones sobre el mensaje real:</b> Eliminar, Mayús+Supr, Mover, Copiar, Archivar, Spam, No es spam, arrastrar y soltar y los botones de fila actúan sobre el mensaje en su carpeta real, no sobre su vista en All Mail.</li>\n<li><b>Seguro por diseño:</b> solo se actúa sobre un mensaje cuando coincide exactamente una copia real. Antes de eliminar definitivamente, el complemento comprueba en el servidor que la copia sigue siendo el mensaje correcto.</li>\n<li><b>Mensajes sin carpeta:</b> encuentra los mensajes que solo existen en All Mail y te permite archivarlos, guardarlos en una carpeta o eliminarlos, también todos a la vez mediante una búsqueda guardada.</li>\n<li><b>Se mantiene sincronizado:</b> una comprobación ligera cada pocos minutos detecta los cambios hechos en otras aplicaciones de Proton y sincroniza solo las carpetas modificadas.</li>\n<li><b>Diagnóstico:</b> la página de ajustes explica cada problema con palabras sencillas y ofrece reparar exactamente las carpetas afectadas.</li>\n</ul>\n\nTodas las demás carpetas y cuentas mantienen el comportamiento normal de Thunderbird. El complemento solo se comunica con tu Bridge local, a través de la propia conexión IMAP de Thunderbird.\n\nRequiere Thunderbird 153 o posterior y Proton Mail Bridge.\n\nSin afiliación con Proton AG.",
+  "releaseNotes": "Primera versión en addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail con las columnas Folder y Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "La vista de tarjetas muestra la carpeta real como insignia"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Ajustes con estado, comprobación del servidor y diagnóstico"
+    }
+  ]
+}

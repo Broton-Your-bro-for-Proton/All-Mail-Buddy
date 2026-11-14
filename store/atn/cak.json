@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Chi Proton Mail Bridge: nuk'üt ri tzij cholb'äl xa ri taq tz'ib' chi jujun taqoj pa All Mail xa nuya' chi ri josq'ij, jalöx, nuk'oje' xa spam nisamäj chi ri taqoj pa ri rucholb'äl.",
+  "description": "Proton Mail Bridge nuk'üt konojel taq taqoj pa ri cholb'äl <b>All Mail</b>, xa chila man nawil ta achike k'o wi ri taqoj, xa ri josq'ij o jalöx man nub'än ta ri nawajo'. All Mail Buddy nuk'ulwachij.\n\n<b>Taq b'anob'äl</b>\n<ul>\n<li><b>Ri cholb'äl chi jun chuwäch:</b> taq b'ey <b>Folder</b> xa <b>Labels</b> pa ri ruwäch tabla, jun rub'i' pa jujun karta pa ruwäch taq karta.</li>\n<li><b>Taq b'anob'äl chi ri taqoj:</b> Josq'ij, Shift+Delete, Jalöx, Kopiyar, Nuk'oje', Spam, Man spam ta, tiyuq' xa tiya' xa ri taq b'otón pa ri b'ey nisamäj chi ri taqoj pa ri rucholb'äl, man pa ri ruwäch All Mail ta.</li>\n<li><b>Ütz chi ri rusamaj:</b> xa nib'än jun b'anob'äl chi ri taqoj ke jun k'ïy ri kopia nuya'. Nab'ey chi ri josq'ij chi jantape', ri tz'aqat nusik'ij pa ri kaqaj we ri kopia ri taqoj ri nawajo'.</li>\n<li><b>Taq taqoj majun cholb'äl:</b> nunaj ri taq taqoj chi xa k'o pa All Mail xa nuya' chi nak'oje', nawojtasaj o najosq'ij, chuqa' konojel pa jun mul ruk'in jun kanoj ri k'o k'olib'äl.</li>\n<li><b>Nik'oje' sinkron:</b> jun jub'a' sik'inïk chi jujun taq q'ij nunaj ri taq jalajoj ri nib'än pa ri taq chakub'äl Proton xa xa ke ri taq cholb'äl ri xjäl nsinkroniza.</li>\n<li><b>Diagnóstico:</b> ri wuj chi taq rub'anikil nuk'üt jujun k'ayewal ruk'in tzij chi jub'a' xa nuya' jun rutz'ib'axik chi xa ke ri taq cholb'äl.</li>\n</ul>\n\nKonojel ri taq cholb'äl xa taq rub'i' chik nik'oje' ri Thunderbird rub'anikil. Ri tz'aqat xa nisik'ij ruk'in ri Bridge chi k'o pa awichin, ruk'in ri rutz'aqat IMAP chi Thunderbird.\n\nNuk'äm Thunderbird 153 o ri k'ak'a' chik xa Proton Mail Bridge.\n\nMan k'o ta rik'in Proton AG.",
+  "releaseNotes": "Nab'ey ruwäch pa addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail ruk'in ri taq b'ey Folder xa Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Ri ruwäch taq karta nuk'üt ri tzij cholb'äl achi jun rub'i'"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Taq rub'anikil ruk'in ri k'o wi, ri sik'inïk chi kaqaj xa ri diagnóstico"
+    }
+  ]
+}

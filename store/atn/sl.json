@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Za Proton Mail Bridge: pokaže pravo mapo in oznake vsakega sporočila v All Mail ter poskrbi, da brisanje, premikanje, arhiviranje in neželena pošta delujejo na sporočilu v njegovi pravi mapi.",
+  "description": "Proton Mail Bridge prikaže vsako sporočilo v mapi <b>All Mail</b>, vendar tam ne vidite, kje sporočilo dejansko je, brisanje ali premikanje pa ne naredi tistega, kar pričakujete. All Mail Buddy to popravi.\n\n<b>Funkcije</b>\n<ul>\n<li><b>Prava mapa na prvi pogled:</b> stolpca <b>Folder</b> in <b>Labels</b> v tabelarnem pogledu, značka na vsaki kartici v pogledu kartic.</li>\n<li><b>Dejanja na pravem sporočilu:</b> Izbriši, Shift+Delete, Premakni, Kopiraj, Arhiviraj, Neželena pošta, Ni neželena pošta, vlečenje in spuščanje ter gumbi v vrsticah delujejo na sporočilu v njegovi pravi mapi, ne na njegovem prikazu v All Mail.</li>\n<li><b>Varno že po zasnovi:</b> dejanje se izvede le, če se ujema natanko ena prava kopija. Pred dokončnim brisanjem dodatek na strežniku preveri, da je kopija še vedno pravo sporočilo.</li>\n<li><b>Sporočila brez mape:</b> poišče sporočila, ki obstajajo le v All Mail, in vam omogoči, da jih razvrstite v mape, arhivirate ali izbrišete, tudi vsa naenkrat prek shranjenega iskanja.</li>\n<li><b>Ostaja usklajeno:</b> lahko preverjanje vsakih nekaj minut zazna spremembe v drugih aplikacijah Proton in uskladi le mape, ki so se spremenile.</li>\n<li><b>Diagnostika:</b> stran z nastavitvami vsako težavo razloži s preprostimi besedami in ponudi popravilo natanko prizadetih map.</li>\n</ul>\n\nVse druge mape in računi ohranijo običajno vedenje Thunderbirda. Dodatek komunicira le z vašim lokalnim Bridge, prek Thunderbirdove lastne povezave IMAP.\n\nZahteva Thunderbird 153 ali novejši in Proton Mail Bridge.\n\nNi povezano s podjetjem Proton AG.",
+  "releaseNotes": "Prva različica na addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail s stolpcema Folder in Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Pogled kartic prikaže pravo mapo kot značko"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Nastavitve s stanjem, preverjanjem strežnika in diagnostiko"
+    }
+  ]
+}

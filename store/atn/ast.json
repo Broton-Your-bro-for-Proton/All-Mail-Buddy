@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Pa Proton Mail Bridge: amuesa la carpeta real y les etiquetes de cada mensaxe de All Mail y fai que desaniciar, mover, archivar y puxarra actúen sobre'l mensaxe na so carpeta real.",
+  "description": "Proton Mail Bridge amuesa tolos mensaxes na carpeta <b>All Mail</b>, pero ellí nun se ve u ta realmente un mensaxe, y desaniciar o mover nun fai lo que s'espera. All Mail Buddy lo igua.\n\n<b>Carauterístiques</b>\n<ul>\n<li><b>La carpeta real d'un güeyu:</b> les columnes <b>Folder</b> y <b>Labels</b> na vista de tabla y una insignia en cada tarxeta na vista de tarxetes.</li>\n<li><b>Aiciones sobre'l mensaxe real:</b> Desaniciar, Mayús+Supr, Mover, Copiar, Archivar, Puxarra, Nun ye puxarra, arrastrar y soltar y los botones de fila actúen sobre'l mensaxe na so carpeta real, non sobre la so vista n'All Mail.</li>\n<li><b>Seguru por diseñu:</b> namás s'actúa sobre un mensaxe cuando concasa exactamente una copia real. Enantes de desaniciar pa siempre, el complementu comprueba nel sirvidor que la copia sigue siendo'l mensaxe correutu.</li>\n<li><b>Mensaxes ensin carpeta:</b> alcuentra los mensaxes que namás esisten n'All Mail y dexa guardalos nuna carpeta, archivalos o desaniciales, tamién tolos a la vez con una gueta guardada.</li>\n<li><b>Caltién la sincronización:</b> una comprobación lixera cada pocos minutos detecta los cambeos fechos n'otres aplicaciones de Proton y namás sincroniza les carpetes que camudaron.</li>\n<li><b>Diagnósticu:</b> la páxina d'axustes esplica cada problema con pallabres cenciello y ufierta reparar exactamente les carpetes afectaes.</li>\n</ul>\n\nToles otres carpetes y cuentes caltienen el comportamientu normal de Thunderbird. El complementu namás se comunica col to Bridge llocal, pente la conexón IMAP del propiu Thunderbird.\n\nRequier Thunderbird 153 o posterior y Proton Mail Bridge.\n\nEnsin afiliación con Proton AG.",
+  "releaseNotes": "Primer versión en addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail coles columnes Folder y Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "La vista de tarxetes amuesa la carpeta real como insignia"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Axustes con estáu, comprobación del sirvidor y diagnósticu"
+    }
+  ]
+}

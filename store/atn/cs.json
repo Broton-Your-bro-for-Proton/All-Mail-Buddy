@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Pro Proton Mail Bridge: ukazuje skutečnou složku a štítky každé zprávy ve složce All Mail a zajistí, že mazání, přesun, archivace a nevyžádaná pošta působí na zprávu v její skutečné složce.",
+  "description": "Proton Mail Bridge zobrazuje každou zprávu ve složce <b>All Mail</b>, ale nevidíte tam, kde zpráva skutečně leží, a její smazání nebo přesun nedělá to, co čekáte. All Mail Buddy to opravuje.\n\n<b>Funkce</b>\n<ul>\n<li><b>Skutečná složka na první pohled:</b> sloupce <b>Folder</b> a <b>Labels</b> v zobrazení tabulky, odznak na každé kartě v zobrazení karet.</li>\n<li><b>Akce na skutečné zprávě:</b> Smazat, Shift+Delete, Přesunout, Kopírovat, Archivovat, Nevyžádaná, Není nevyžádaná, přetažení myší i tlačítka v řádcích působí na zprávu v její skutečné složce, ne na její zobrazení v All Mail.</li>\n<li><b>Bezpečné už od návrhu:</b> akce se provede jen tehdy, když odpovídá právě jedna skutečná kopie. Před trvalým smazáním doplněk na serveru ověří, že kopie je stále ta správná zpráva.</li>\n<li><b>Zprávy bez složky:</b> najde zprávy, které existují jen ve složce All Mail, a umožní je zařadit do složek, archivovat nebo smazat, také všechny najednou přes uložené hledání.</li>\n<li><b>Zůstává synchronizované:</b> lehká kontrola každých pár minut zaznamená změny provedené v jiných aplikacích Proton a synchronizuje jen složky, které se změnily.</li>\n<li><b>Diagnostika:</b> stránka nastavení vysvětlí každý problém jednoduchými slovy a nabídne opravu přesně těch složek, kterých se týká.</li>\n</ul>\n\nVšechny ostatní složky a účty si zachovají běžné chování Thunderbirdu. Doplněk komunikuje jen s vaším místním Bridge, přes vlastní připojení IMAP Thunderbirdu.\n\nVyžaduje Thunderbird 153 nebo novější a Proton Mail Bridge.\n\nBez spojení se společností Proton AG.",
+  "releaseNotes": "První verze na addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail se sloupci Folder a Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Zobrazení karet ukazuje skutečnou složku jako odznak"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Nastavení se stavem, kontrolou serveru a diagnostikou"
+    }
+  ]
+}

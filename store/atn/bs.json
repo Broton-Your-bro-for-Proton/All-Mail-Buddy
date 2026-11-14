@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Za Proton Mail Bridge: prikazuje stvarnu mapu i oznake svake poruke u All Mail te omogućava da brisanje, premještanje, arhiviranje i neželjena pošta djeluju na poruku u njenoj stvarnoj mapi.",
+  "description": "Proton Mail Bridge prikazuje svaku poruku u mapi <b>All Mail</b>, ali tamo ne možete vidjeti gdje poruka zaista živi, a njeno brisanje ili premještanje ne radi ono što očekujete. All Mail Buddy to popravlja.\n\n<b>Funkcije</b>\n<ul>\n<li><b>Stvarna mapa na prvi pogled:</b> kolone <b>Folder</b> i <b>Labels</b> u tabelarnom prikazu, značka na svakoj kartici u prikazu kartica.</li>\n<li><b>Radnje na stvarnoj poruci:</b> Obriši, Shift+Delete, Premjesti, Kopiraj, Arhiviraj, Neželjena pošta, Nije neželjena pošta, prevlačenje te dugmad u redovima djeluju na poruku u njenoj stvarnoj mapi, a ne na njen prikaz u All Mail.</li>\n<li><b>Sigurno po dizajnu:</b> radnja se izvršava samo kada se podudara tačno jedna stvarna kopija. Prije trajnog brisanja dodatak na serveru provjerava da li je kopija još uvijek prava poruka.</li>\n<li><b>Poruke bez mape:</b> pronalazi poruke koje postoje samo u All Mail i omogućava vam da ih razvrstate u mape, arhivirate ili obrišete, također sve odjednom putem spremljene pretrage.</li>\n<li><b>Ostaje sinhronizovano:</b> lagana provjera svakih nekoliko minuta uočava promjene napravljene u drugim Proton aplikacijama i sinhronizuje samo mape koje su se promijenile.</li>\n<li><b>Dijagnostika:</b> stranica s postavkama objašnjava svaki problem jednostavnim riječima i nudi popravak tačno onih mapa koje su pogođene.</li>\n</ul>\n\nSvaka druga mapa i račun zadržavaju uobičajeno ponašanje Thunderbirda. Dodatak komunicira samo s vašim lokalnim Bridgeom, putem Thunderbirdove vlastite IMAP veze.\n\nZahtijeva Thunderbird 153 ili noviji i Proton Mail Bridge.\n\nNije povezano s kompanijom Proton AG.",
+  "releaseNotes": "Prva verzija na addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail s kolonama Folder i Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Prikaz kartica prikazuje stvarnu mapu kao značku"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Postavke sa statusom, provjerom servera i dijagnostikom"
+    }
+  ]
+}

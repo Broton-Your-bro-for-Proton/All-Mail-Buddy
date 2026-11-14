@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "For Proton Mail Bridge: viser den virkelige mappen og etikettene til hver melding i All Mail, og får slett, flytt, arkiver og søppelpost til å virke på meldingen i dens virkelige mappe.",
+  "description": "Proton Mail Bridge viser alle meldinger i mappen <b>All Mail</b>, men der kan du ikke se hvor en melding egentlig ligger, og sletting eller flytting gjør ikke det du forventer. All Mail Buddy løser dette.\n\n<b>Funksjoner</b>\n<ul>\n<li><b>Den virkelige mappen med et blikk:</b> kolonnene <b>Folder</b> og <b>Labels</b> i tabellvisningen, et merke på hvert kort i kortvisningen.</li>\n<li><b>Handlinger på den virkelige meldingen:</b> Slett, Shift+Delete, Flytt, Kopier, Arkiver, Søppelpost, Ikke søppelpost, dra og slipp og knappene på raden virker på meldingen i dens virkelige mappe, ikke på All Mail-visningen av den.</li>\n<li><b>Trygg fra grunnen av:</b> en melding behandles bare når nøyaktig én virkelig kopi passer. Før en endelig sletting sjekker tillegget på serveren at kopien fortsatt er den riktige meldingen.</li>\n<li><b>Meldinger uten mappe:</b> finner meldinger som bare finnes i All Mail og lar deg legge dem i en mappe, arkivere eller slette dem, også alle samtidig via et lagret søk.</li>\n<li><b>Holder seg synkronisert:</b> en lett sjekk hvert par minutter oppdager endringer gjort i andre Proton-apper og synkroniserer bare mappene som er endret.</li>\n<li><b>Diagnose:</b> innstillingssiden forklarer hvert problem med enkle ord og tilbyr reparasjon av nøyaktig de berørte mappene.</li>\n</ul>\n\nAlle andre mapper og kontoer beholder Thunderbirds vanlige oppførsel. Tillegget snakker bare med din lokale Bridge, gjennom Thunderbirds egen IMAP-tilkobling.\n\nKrever Thunderbird 153 eller nyere og Proton Mail Bridge.\n\nIkke tilknyttet Proton AG.",
+  "releaseNotes": "Første versjon på addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail med kolonnene Folder og Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Kortvisningen viser den virkelige mappen som et merke"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Innstillinger med status, serversjekk og diagnose"
+    }
+  ]
+}

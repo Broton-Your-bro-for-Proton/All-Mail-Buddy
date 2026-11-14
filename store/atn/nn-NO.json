@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "For Proton Mail Bridge: viser den verkelege mappa og etikettane til kvar melding i All Mail, og får slett, flytt, arkiver og søppelpost til å verke på meldinga i den verkelege mappa.",
+  "description": "Proton Mail Bridge viser alle meldingar i mappa <b>All Mail</b>, men der kan du ikkje sjå kvar ei melding eigentleg ligg, og sletting eller flytting gjer ikkje det du ventar. All Mail Buddy løyser dette.\n\n<b>Funksjonar</b>\n<ul>\n<li><b>Den verkelege mappa med eitt blikk:</b> kolonnene <b>Folder</b> og <b>Labels</b> i tabellvisinga, eit merke på kvart kort i kortvisinga.</li>\n<li><b>Handlingar på den verkelege meldinga:</b> Slett, Shift+Delete, Flytt, Kopier, Arkiver, Søppelpost, Ikkje søppelpost, dra og slepp og knappane på rada verkar på meldinga i den verkelege mappa, ikkje på All Mail-visinga av henne.</li>\n<li><b>Trygg frå grunnen av:</b> ei melding blir berre behandla når nøyaktig éin verkeleg kopi passar. Før ei endeleg sletting sjekkar tillegget på tenaren at kopien framleis er den rette meldinga.</li>\n<li><b>Meldingar utan mappe:</b> finn meldingar som berre finst i All Mail og lèt deg leggje dei i ei mappe, arkivere eller slette dei, òg alle samtidig via eit lagra søk.</li>\n<li><b>Held seg synkronisert:</b> ei lett sjekk kvart par minutt oppdagar endringar gjorde i andre Proton-appar og synkroniserer berre mappene som er endra.</li>\n<li><b>Diagnose:</b> innstillingssida forklarer kvart problem med enkle ord og tilbyr reparasjon av nøyaktig dei råka mappene.</li>\n</ul>\n\nAlle andre mapper og kontoar held på den vanlege åtferda i Thunderbird. Tillegget snakkar berre med den lokale Bridge-en din, gjennom Thunderbirds eigen IMAP-tilkopling.\n\nKrev Thunderbird 153 eller nyare og Proton Mail Bridge.\n\nIkkje tilknytt Proton AG.",
+  "releaseNotes": "Første versjon på addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail med kolonnene Folder og Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Kortvisinga viser den verkelege mappa som eit merke"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Innstillingar med status, tenarsjekk og diagnose"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Proton Mail Bridge-rako: All Mail-eko mezu bakoitzaren benetako karpeta eta etiketak erakusten ditu eta ezabatu, mugitu, artxibatu eta spam ekintzak mezuaren benetako karpetan gauzatzen ditu.",
+  "description": "Proton Mail Bridge-k mezu guztiak erakusten ditu <b>All Mail</b> karpetan, baina han ezin da ikusi mezu bat benetan non dagoen, eta ezabatzeak edo mugitzeak ez du espero duzuna egiten. All Mail Buddy-k hori konpontzen du.\n\n<b>Eginbideak</b>\n<ul>\n<li><b>Benetako karpeta begirada batean:</b> <b>Folder</b> eta <b>Labels</b> zutabeak taula-ikuspegian, eta txartel bakoitzean ikurra txartel-ikuspegian.</li>\n<li><b>Ekintzak benetako mezuan:</b> Ezabatu, Shift+Delete, Mugitu, Kopiatu, Artxibatu, Spam, Ez da spam, arrastatu eta jaregitea eta lerroko botoiak mezuaren benetako karpetan aritzen dira, ez All Mail-eko ikuspegian.</li>\n<li><b>Segurua diseinuz:</b> mezu batean ekintza bat egiten da benetako kopia bakar batek bat datorrenean soilik. Betiko ezabatu aurretik, gehigarriak zerbitzarian egiaztatzen du kopia oraindik mezu zuzena dela.</li>\n<li><b>Karpetarik gabeko mezuak:</b> All Mail-en soilik dauden mezuak aurkitzen ditu eta karpeta batean gordetzeko, artxibatzeko edo ezabatzeko aukera ematen dizu, baita guztiak batera ere gordetako bilaketa baten bidez.</li>\n<li><b>Sinkronizatuta jarraitzen du:</b> minutu gutxiro egiten den egiaztapen arin batek Protonen beste aplikazioetan egindako aldaketak antzematen ditu eta aldatu diren karpetak soilik sinkronizatzen ditu.</li>\n<li><b>Diagnostikoa:</b> ezarpenen orriak arazo bakoitza hitz argiz azaltzen du eta kaltetutako karpeten konponketa zehatza eskaintzen du.</li>\n</ul>\n\nGainerako karpeta eta kontu guztiek Thunderbird-en ohiko portaera mantentzen dute. Gehigarriak zure Bridge lokalarekin soilik komunikatzen da, Thunderbird-en beraren IMAP konexioaren bidez.\n\nThunderbird 153 edo berriagoa eta Proton Mail Bridge behar dira.\n\nEz dago Proton AG-rekin lotuta.",
+  "releaseNotes": "Lehen bertsioa addons.thunderbird.net webgunean.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail, Folder eta Labels zutabeekin"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Txartel-ikuspegiak benetako karpeta ikur gisa erakusten du"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Ezarpenak egoerarekin, zerbitzariaren egiaztapenarekin eta diagnostikoarekin"
+    }
+  ]
+}

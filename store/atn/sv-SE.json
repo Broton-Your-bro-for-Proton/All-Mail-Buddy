@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "För Proton Mail Bridge: visar den verkliga mappen och etiketterna för varje meddelande i All Mail och får radera, flytta, arkivera och skräppost att verka på meddelandet i dess verkliga mapp.",
+  "description": "Proton Mail Bridge visar alla meddelanden i mappen <b>All Mail</b>, men där kan du inte se var ett meddelande egentligen finns, och att radera eller flytta det gör inte det du förväntar dig. All Mail Buddy åtgärdar det.\n\n<b>Funktioner</b>\n<ul>\n<li><b>Den verkliga mappen i en blick:</b> kolumnerna <b>Folder</b> och <b>Labels</b> i tabellvyn, en bricka på varje kort i kortvyn.</li>\n<li><b>Åtgärder på det verkliga meddelandet:</b> Radera, Shift+Delete, Flytta, Kopiera, Arkivera, Skräppost, Inte skräppost, dra och släpp och radknapparna verkar på meddelandet i dess verkliga mapp, inte på All Mail-vyn av det.</li>\n<li><b>Säkert från grunden:</b> ett meddelande hanteras bara när exakt en verklig kopia matchar. Innan en slutgiltig radering kontrollerar tillägget på servern att kopian fortfarande är rätt meddelande.</li>\n<li><b>Meddelanden utan mapp:</b> hittar meddelanden som bara finns i All Mail och låter dig lägga dem i en mapp, arkivera eller radera dem, även alla på en gång via en sparad sökning.</li>\n<li><b>Håller sig synkroniserat:</b> en lätt kontroll med några minuters mellanrum upptäcker ändringar i andra Proton-appar och synkroniserar bara de mappar som ändrats.</li>\n<li><b>Diagnos:</b> inställningssidan förklarar varje problem med enkla ord och erbjuder en reparation av just de berörda mapparna.</li>\n</ul>\n\nAlla andra mappar och konton behåller Thunderbirds normala beteende. Tillägget pratar bara med din lokala Bridge, via Thunderbirds egen IMAP-anslutning.\n\nKräver Thunderbird 153 eller senare och Proton Mail Bridge.\n\nInte knutet till Proton AG.",
+  "releaseNotes": "Första versionen på addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail med kolumnerna Folder och Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Kortvyn visar den verkliga mappen som en bricka"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Inställningar med status, serverkontroll och diagnos"
+    }
+  ]
+}

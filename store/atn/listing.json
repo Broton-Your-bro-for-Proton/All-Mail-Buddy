@@ -1,0 +1,22 @@
+{
+  "categories": [
+    "Folders and Filters",
+    "Message and News Reading"
+  ],
+  "tags": [
+    "protonmail",
+    "proton bridge",
+    "all mail",
+    "folders",
+    "labels"
+  ],
+  "homepage": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy",
+  "supportUrl": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy/issues",
+  "supportEmail": "",
+  "license": "AGPL-3.0-only",
+  "privacyPolicy": "",
+  "reviewerNotes": "What it does: in an IMAP account served by Proton Mail Bridge (detected by the top-level folders \"All Mail\" plus \"Folders\" or \"Labels\"), it adds the columns Folder and Labels to the message list of All Mail and routes delete, move, copy, archive and junk on All Mail messages to the copy of the message in its real folder. All other accounts and folders are untouched.\n\nHow to test without a Proton account: any IMAP account whose root has the folders \"All Mail\" and \"Folders\" (or \"Labels\") is treated like Bridge. Put the same message (same Message-ID, size and date) into \"All Mail\" and into one other folder; the Folder column then shows that folder, and deleting it in All Mail moves the real copy to Trash. The settings page (Add-ons Manager > All Mail Buddy > Options) shows the index status and diagnosis without any account.\n\nWhy an Experiment API (api/allMailPlus): WebExtension APIs cannot add message list columns, a custom search term, or intercept the built-in delete, move, archive and junk commands. The experiment does exactly that, only for messages in a Bridge All Mail folder.\n\nServices contacted: none of its own. It only uses Thunderbird's existing IMAP connection to the local Bridge (IMAP SEARCH and STATUS). No data leaves the computer.\n\nNo bundled third-party libraries. All code is plain, unminified JavaScript. The package is built with `npm run build`, which zips the src folder unchanged.",
+  "slug": "all-mail-buddy",
+  "licenseUrl": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "sourceCodeRequired": false
+}

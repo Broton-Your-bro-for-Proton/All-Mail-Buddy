@@ -1,0 +1,20 @@
+{
+  "name": "All Mail Buddy for Proton",
+  "summary": "Le haghaidh Proton Mail Bridge: taispeánann sé fíorfhillteán agus lipéid gach teachtaireachta in All Mail agus cuireann sé ar scriosadh, bogadh, cartlannú agus turscar gníomhú ar an teachtaireacht ina fíorfhillteán.",
+  "description": "Taispeánann Proton Mail Bridge gach teachtaireacht san fhillteán <b>All Mail</b>, ach ní féidir a fheiceáil ansin cá bhfuil teachtaireacht i ndáiríre, agus ní dhéanann a scriosadh nó a bhogadh an rud a mbeifeá ag súil leis. Réitíonn All Mail Buddy é sin.\n\n<b>Gnéithe</b>\n<ul>\n<li><b>An fíorfhillteán ar an gcéad amharc:</b> na colúin <b>Folder</b> agus <b>Labels</b> san amharc tábla, suaitheantas ar gach cárta san amharc cártaí.</li>\n<li><b>Gníomhartha ar an bhfíor-theachtaireacht:</b> Scrios, Shift+Delete, Bog, Cóipeáil, Cartlannaigh, Turscar, Ní turscar, tarraing agus scaoil agus cnaipí na sraithe gníomhaíonn siad ar an teachtaireacht ina fíorfhillteán, ní ar a hamharc in All Mail.</li>\n<li><b>Sábháilte ó dhearadh:</b> ní ghníomhaítear ar theachtaireacht ach nuair a mheaitseálann fíorchóip amháin go díreach. Sula scriosann sé go buan, seiceálann an breiseán ar an bhfreastalaí gurb í an teachtaireacht cheart an chóip fós.</li>\n<li><b>Teachtaireachtaí gan fillteán:</b> aimsíonn sé teachtaireachtaí nach bhfuil ann ach in All Mail agus ligeann sé duit iad a chlárú, a chartlannú nó a scriosadh, agus iad go léir ar an am céanna trí chuardach sábháilte.</li>\n<li><b>Fanann sé sioncronaithe:</b> braitheann seiceáil éadrom gach cúpla nóiméad athruithe a rinneadh in aipeanna eile Proton agus ní shioncronaíonn sé ach na fillteáin a d'athraigh.</li>\n<li><b>Diagnóis:</b> míníonn an leathanach socruithe gach fadhb i bhfocail shimplí agus tairgeann sé deisiú na bhfillteán lena mbaineann go beacht.</li>\n</ul>\n\nCoinníonn gach fillteán agus cuntas eile gnáthiompar Thunderbird. Ní chumarsáideann an breiseán ach le do Bridge áitiúil, trí nasc IMAP Thunderbird féin.\n\nTeastaíonn Thunderbird 153 nó níos déanaí agus Proton Mail Bridge.\n\nNíl aon cheangal le Proton AG.",
+  "releaseNotes": "An chéad leagan ar addons.thunderbird.net.",
+  "screenshots": [
+    {
+      "file": "01-all-mail.png",
+      "caption": "All Mail leis na colúin Folder agus Labels"
+    },
+    {
+      "file": "02-cards.png",
+      "caption": "Taispeánann an t-amharc cártaí an fíorfhillteán mar shuaitheantas"
+    },
+    {
+      "file": "03-settings.png",
+      "caption": "Socruithe le stádas, seiceáil freastalaí agus diagnóis"
+    }
+  ]
+}
