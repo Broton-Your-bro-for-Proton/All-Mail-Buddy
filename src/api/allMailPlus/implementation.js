@@ -7,6 +7,7 @@ var { MailUtils } = ChromeUtils.importESModule("resource:///modules/MailUtils.sy
 var { MessageArchiver } = ChromeUtils.importESModule("resource:///modules/MessageArchiver.sys.mjs");
 var { VirtualFolderHelper } = ChromeUtils.importESModule("resource:///modules/VirtualFolderWrapper.sys.mjs");
 var { ThreadPaneColumns } = ChromeUtils.importESModule("chrome://messenger/content/ThreadPaneColumns.mjs");
+var { QuickFilterManager } = ChromeUtils.importESModule("resource:///modules/QuickFilterManager.sys.mjs");
 var { setTimeout, clearTimeout, setInterval, clearInterval } = ChromeUtils.importESModule(
   "resource://gre/modules/Timer.sys.mjs"
 );
@@ -14,7 +15,9 @@ var { setTimeout, clearTimeout, setInterval, clearInterval } = ChromeUtils.impor
 const LOCATION_COLUMN = "allMailPlusLocation";
 const LABELS_COLUMN = "allMailPlusLabels";
 const INIT_PROPERTY = "allMailPlusColumnsInit";
-const SEARCH_MARK = "allMailBuddySavedSearch"; // folder property of the saved search
+const QUICK_FILTER = "allMailBuddyFolders";
+const QUICK_FILTER_BUTTON = "qfb-allmailbuddy-folders";
+const SEARCH_MARK ="allMailBuddySavedSearch"; // folder property of the saved search
 
 const HANDLED_COMMANDS = new Set([
   "cmd_deleteMessage",
@@ -102,6 +105,7 @@ const controller = {
     this.registerColumns();
     searchTerm = ChromeUtils.importESModule(`resource://${RESOURCE_HOST}/lib/searchTerm.sys.mjs`);
     searchTerm.setImplementation(this.searchTermImpl());
+    this.defineQuickFilter();
     MailServices.mfn.addListener(
       this.folderListener,
       mfn.msgAdded | mfn.msgsDeleted | mfn.msgsMoveCopyCompleted | mfn.msgKeyChanged |
@@ -133,6 +137,9 @@ const controller = {
       unhook();
     }
     this.unhooks.clear();
+    if (QuickFilterManager.filterDefsByName[QUICK_FILTER]) {
+      QuickFilterManager.killFilter(QUICK_FILTER);
+    }
     for (const timer of this.timers.values()) {
       clearTimeout(timer);
     }
@@ -1438,18 +1445,117 @@ const controller = {
 
   createNoFolderSearch(account, name) {
     const session = Cc["@mozilla.org/messenger/searchSession;1"].createInstance(Ci.nsIMsgSearchSession);
-    const term = session.createTerm();
-    const value = term.value;
-    value.attrib = Ci.nsMsgSearchAttrib.Custom;
-    value.str = "nofolder";
-    term.attrib = Ci.nsMsgSearchAttrib.Custom;
-    term.customId = searchTerm.SEARCH_TERM_ID;
-    term.op = Ci.nsMsgSearchOp.Is;
-    term.value = value;
-    term.booleanAnd = true;
+    const term = this.locationTerm(session, "nofolder", Ci.nsMsgSearchOp.Is);
     const folder = VirtualFolderHelper.createNewVirtualFolder(name, account.root, [account.allMail], [term], false).virtualFolder;
     folder.setStringProperty(SEARCH_MARK, "nofolder");
     return folder;
+  },
+
+  /** A "Folder (All Mail Buddy)" search term; value is a folder column text or a match status. */
+  locationTerm(session, str, op) {
+    const term = session.createTerm();
+    const value = term.value;
+    value.attrib = Ci.nsMsgSearchAttrib.Custom;
+    value.str = str;
+    term.attrib = Ci.nsMsgSearchAttrib.Custom;
+    term.customId = searchTerm.SEARCH_TERM_ID;
+    term.op = op;
+    term.value = value;
+    term.booleanAnd = true;
+    return term;
+  },
+
+  // ---- quick filter bar ----------------------------------------------------
+
+  /** Quick filter whose value lists the folders hidden in All Mail ("nofolder" for none). */
+  defineQuickFilter() {
+    if (QuickFilterManager.filterDefsByName[QUICK_FILTER]) {
+      return;
+    }
+    QuickFilterManager.defineFilter({
+      name: QUICK_FILTER,
+      domId: QUICK_FILTER_BUTTON,
+      appendTerms: (session, terms, hidden) => {
+        for (const str of hidden ?? []) {
+          terms.push(this.locationTerm(session, str, Ci.nsMsgSearchOp.Isnt));
+        }
+      },
+      // The button opens a folder list; a click alone changes nothing.
+      onCommand: state => [state, false],
+      reflectInDOM: (node, hidden) => (node.pressed = !!hidden?.length),
+    });
+  },
+
+  /** Adds the folder button to the quick filter bar of an about:3pane window. */
+  addQuickFilterButton(win) {
+    const doc = win.document;
+    const group = doc.getElementById("qfb-attachment")?.parentNode;
+    if (!group || !win.quickFilterBar) {
+      return () => {};
+    }
+    const label = this.config.columnNames?.folder || "Folder";
+    const button = doc.createElement("button", { is: "toggle-button" });
+    button.id = QUICK_FILTER_BUTTON;
+    button.className = "button collapsible-button icon-button check-button";
+    button.title = `${label} (All Mail Buddy)`;
+    button.style.backgroundImage = "var(--icon-folder)";
+    button.append(Object.assign(doc.createElement("span"), { textContent: label }));
+    group.append(button);
+    const popup = doc.createXULElement("menupopup");
+    doc.documentElement.append(popup);
+
+    const qfb = win.quickFilterBar;
+    const hiddenNow = () => qfb.filterer.filterValues[QUICK_FILTER] ?? [];
+    const apply = hidden => {
+      qfb.filterer.setFilterValue(QUICK_FILTER, hidden.length ? hidden : null);
+      qfb.updateSearch();
+      qfb.reflectFiltererState(QUICK_FILTER);
+    };
+    const onClick = () => {
+      const account = this.accountFor(win.gFolder);
+      if (!account) {
+        return;
+      }
+      const names = [...account.index.folders.values()].filter(f => f.kind == "real").map(f => f.name);
+      const hidden = hiddenNow();
+      popup.replaceChildren();
+      for (const [value, text] of [
+        ...[...new Set(names)].sort((a, b) => a.localeCompare(b)).map(name => [name, name]),
+        ["nofolder", this.config.columnNames?.noFolder || "No folder"],
+      ]) {
+        const item = doc.createXULElement("menuitem");
+        item.setAttribute("type", "checkbox");
+        item.setAttribute("closemenu", "none");
+        item.setAttribute("label", text);
+        item.setAttribute("checked", hidden.includes(value) ? "false" : "true");
+        item.addEventListener("command", () => {
+          const before = hiddenNow();
+          const show = before.includes(value);
+          item.setAttribute("checked", String(show));
+          apply(show ? before.filter(v => v != value) : [...before, value]);
+        });
+        popup.append(item);
+      }
+      popup.openPopup(button, "after_start");
+    };
+    // Only All Mail has a folder column to filter on; other folders drop the filter.
+    const onFolder = () => {
+      button.hidden = !this.isAllMail(win.gFolder);
+      if (button.hidden && hiddenNow().length) {
+        apply([]);
+      }
+    };
+    button.addEventListener("click", onClick);
+    win.addEventListener("folderURIChanged", onFolder);
+    onFolder();
+    return () => {
+      win.removeEventListener("folderURIChanged", onFolder);
+      if (hiddenNow().length) {
+        apply([]);
+      }
+      button.remove();
+      popup.remove();
+    };
   },
 
   // ---- columns -------------------------------------------------------------
@@ -1637,6 +1743,8 @@ const controller = {
         win.removeEventListener("request-delete", onRowEvent, true);
         win.removeEventListener("toggle-spam", onRowEvent, true);
       });
+
+      undo.push(this.addQuickFilterButton(win));
 
       win.customElements.whenDefined("thread-card").then(() => {
         const Card = win.customElements.get("thread-card");

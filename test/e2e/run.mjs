@@ -468,6 +468,48 @@ try {
   await screenshot(client, "table");
 
   await check(
+    "quick filter bar button hides folders in All Mail",
+    client,
+    `
+    let win = await show("All Mail");
+    win.quickFilterBar._showFilterBar(true);
+    const button = win.document.getElementById("qfb-allmailbuddy-folders");
+    await until(() => button && !button.hidden, "button shown in All Mail");
+    const shown = id =>
+      Array.from({ length: win.gDBView.rowCount }, (_, i) => win.gDBView.getMsgHdrAt(i).messageId).includes(id + "@test");
+    button.click();
+    const popup = () => [...win.document.querySelectorAll("menupopup")].find(p => p.querySelector("menuitem[label='Finanzen']"));
+    await until(() => popup()?.state == "open", "folder list open");
+    const items = [...popup().children];
+    const labels = items.map(i => i.getAttribute("label"));
+    if (labels.join() != "Archive,Finanzen,Inbox,Outbox,Sent,Shops,Spam,Trash,No folder") throw new Error("items: " + labels);
+    items[2].doCommand();
+    await until(() => !shown("hello") && shown("invoice") && shown("orphan"), "Inbox hidden");
+    if (!button.pressed || items[2].getAttribute("checked") != "false") throw new Error("button or item state");
+    items[8].doCommand();
+    await until(() => !shown("orphan") && shown("invoice"), "no folder hidden");
+    `
+  );
+  await screenshot(client, "quickfilter");
+
+  await check(
+    "the folder filter is dropped outside All Mail",
+    client,
+    `
+    const win = pane();
+    const button = win.document.getElementById("qfb-allmailbuddy-folders");
+    const shown = id =>
+      Array.from({ length: win.gDBView.rowCount }, (_, i) => win.gDBView.getMsgHdrAt(i).messageId).includes(id + "@test");
+    [...win.document.querySelectorAll("menupopup")].forEach(p => p.hidePopup());
+    await show("Inbox");
+    if (!button.hidden) throw new Error("button shown outside All Mail");
+    await show("All Mail");
+    await until(() => shown("hello") && shown("orphan") && !button.pressed, "filter dropped after leaving All Mail");
+    win.quickFilterBar._showFilterBar(false);
+    `
+  );
+
+  await check(
     "Delete in All Mail moves the real message to Trash",
     client,
     `
