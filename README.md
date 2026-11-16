@@ -15,7 +15,10 @@ Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder i
   **Labels**),
 * makes Delete, Shift+Delete, Move, Copy, Archive, Junk, Not junk, Move again,
   drag and drop onto a folder and the row buttons act on the message in its
-  real folder instead of the All Mail view of it.
+  real folder instead of the All Mail view of it,
+* adds a folder button to the quick filter bar that lists every real folder
+  and *No folder*; unchecking one hides its messages from All Mail until you
+  leave the folder.
 
 Every other folder and account keeps Thunderbird's native behavior. Feasibility,
 design and the matching rules are described in [PLAN.md](PLAN.md).
@@ -145,6 +148,11 @@ the status `nofolder`, `ambiguous` or `missing`. It only works on the local
 message list, not as a search on the server. Message filters can use it too,
 but a message that just arrived may count as `nofolder` until its folder is
 indexed.
+
+The folder button in the quick filter bar uses the same criterion. It hides a
+message only when its Folder column is exactly the unchecked folder, so a
+message shown as `Inbox, Sent` or `Inbox?` stays visible when only Inbox is
+unchecked.
 
 In *Show all affected messages*, a click on a row selects that message in All
 Mail.
