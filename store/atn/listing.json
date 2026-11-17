@@ -1,0 +1,22 @@
+{
+  "categories": [
+    "Folders and Filters",
+    "Message and News Reading"
+  ],
+  "tags": [
+    "protonmail",
+    "proton bridge",
+    "all mail",
+    "folders",
+    "labels"
+  ],
+  "homepage": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy",
+  "supportUrl": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy/issues",
+  "supportEmail": "",
+  "license": "AGPL-3.0-only",
+  "privacyPolicy": "",
+  "reviewerNotes": "What it does: in an IMAP account served by Proton Mail Bridge (detected by the top-level folders \"All Mail\" plus \"Folders\" or \"Labels\"), it shows the real folder of every All Mail message (columns Folder and Labels in the table view, a badge in the cards view) and routes delete, move, copy, archive and junk on All Mail messages to the copy of the message in its real folder. All other accounts and folders are untouched.\n\nHow to test without a Proton account: any IMAP account whose root has the folders \"All Mail\" and \"Folders\" (or \"Labels\") is treated like Bridge. Put the same message (same Message-ID, size and date) into \"All Mail\" and into one other folder; the Folder column then shows that folder, and deleting it in All Mail moves the real copy to Trash. The settings page (Add-ons Manager > All Mail Buddy > Options) shows the index status and diagnosis without any account.\n\nPermissions:\n- storage: settings.\n- notifications: tells the user when a routed command on an All Mail message was refused or failed, for example a move into All Mail itself or an account without an Archive folder.\n\nExperiment API allMailPlus (api/allMailPlus), function by function. No WebExtension API can add message list columns or a cards view badge, add a search term, or intercept the built-in delete, move, archive and junk commands; that is why the experiment exists. Every hook below acts only on messages in a Bridge All Mail folder and is removed on shutdown.\n- start: registers a resource:// alias for the add-on's lib folder, folder and message listeners (MailServices.mfn, mailSession) to keep a local Message-ID to folder index current, the custom columns (ThreadPaneColumns), the custom search term, and per 3-pane window a wrapper around commands.doCommand, the thread pane drop handler and the cards view row filler. Not possible with WebExtension APIs: columns, search terms and command interception have no API.\n- configure: applies changed settings to the running controller.\n- getStatus: index state per account for the settings page.\n- rebuild: rebuilds the index from the local message databases (nsIMsgDBService). messages.query would be far too slow for tens of thousands of messages and has no Message-ID index.\n- syncNow: updates all folders of the Bridge account now.\n- checkServer: compares the local folder lists with the server through nsIMsgSearchSession online IMAP SEARCH and STATUS, to find folders whose local list is outdated. The WebExtension API has no server-side search.\n- listServerFolders: lists server folders including unsubscribed ones; the folders API only knows subscribed folders.\n- listProblems: All Mail messages without exactly one real copy, for the settings page.\n- openNoFolderSearch: creates (once, local only) and opens a saved search \"AMB\" with the messages without a folder, using the custom search term.\n- repairDifferingFolders: rebuilds the local list of affected folders the way Thunderbird's own \"Repair Folder\" does, after the user confirms.\n- showMessage: opens one message from the problem list (MailUtils).\n- getDiagnostics, clearDiagnostics: an in-memory log shown on the settings page.\n- onNotice event: passes those messages from the experiment to the background page, which shows them as notifications.\n\nServices contacted: none of its own. It only uses Thunderbird's existing IMAP connection to the local Bridge (IMAP SEARCH and STATUS). No data leaves the computer.\n\nNo bundled third-party libraries. All code is plain, unminified JavaScript. The package is built with `npm run build`, which zips the src folder unchanged.",
+  "slug": "all-mail-buddy",
+  "licenseUrl": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "sourceCodeRequired": false
+}
