@@ -1,0 +1,18 @@
+{
+  "addons": {
+    "allmailplus@hypercrisis": {
+      "updates": [
+        {
+          "version": "0.2.14",
+          "update_link": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy/releases/download/v0.2.14/allmail-buddy-0.2.14.xpi",
+          "applications": {
+            "gecko": {
+              "strict_min_version": "153.0",
+              "strict_max_version": "153.*"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

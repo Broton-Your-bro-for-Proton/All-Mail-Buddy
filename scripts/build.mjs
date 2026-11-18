@@ -1,4 +1,5 @@
-// Packs src/ into dist/allmailplus-<version>.xpi.
+// Packs src/ into dist/allmail-buddy-<version>.xpi and points updates.json,
+// the manifest's update_url, at that version's GitHub release asset.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -6,7 +7,15 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const src = path.join(root, "src");
-const { version } = JSON.parse(fs.readFileSync(path.join(src, "manifest.json"), "utf8"));
+const manifest = JSON.parse(fs.readFileSync(path.join(src, "manifest.json"), "utf8"));
+const { version } = manifest;
+const { id, update_url, ...gecko } = manifest.browser_specific_settings.gecko;
+const update = {
+  version,
+  update_link: `${manifest.homepage_url}/releases/download/v${version}/allmail-buddy-${version}.xpi`,
+  applications: { gecko },
+};
+fs.writeFileSync(path.join(root, "updates.json"), JSON.stringify({ addons: { [id]: { updates: [update] } } }, null, 2) + "\n");
 const out = path.join(root, "dist", `allmail-buddy-${version}.xpi`);
 
 fs.mkdirSync(path.dirname(out), { recursive: true });

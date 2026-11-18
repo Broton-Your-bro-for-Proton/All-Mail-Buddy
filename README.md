@@ -27,12 +27,12 @@ Built and tested against Thunderbird 153.6.
 
 ## 📦 Install
 
-1. `npm run build` creates `dist/allmail-buddy-<version>.xpi`.
-2. The add-on is not signed. Either load it temporarily via
-   *Tools > Developer Tools > Debug Add-ons > Load Temporary Add-on* (pick
-   `src/manifest.json`), or set `xpinstall.signatures.required` to `false` in the
-   Config Editor and install the `.xpi` via *Add-ons and Themes > Install Add-on
-   From File*.
+1. Download `allmail-buddy-<version>.xpi` from the
+   [latest release](https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy/releases/latest)
+   and drop it onto Thunderbird's *Add-ons and Themes* page.
+2. Updates arrive through Thunderbird's normal add-on update check. The add-on
+   is not on addons.thunderbird.net, which currently accepts no new add-ons
+   with their own Experiment API.
 3. The settings page (*Add-ons and Themes > All Mail Buddy > Options*) shows the
    detected Bridge accounts, the index state and how many All Mail messages
    were matched.
