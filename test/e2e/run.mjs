@@ -360,7 +360,8 @@ async function screenshot(client, name) {
 
 const tb = spawn(binary, ["-profile", profile, "-no-remote", "-marionette", "-remote-allow-system-access"], {
   stdio: "ignore",
-  env: { ...process.env, MOZ_CRASHREPORTER_DISABLE: "1" },
+  // Thunderbird 160+ needs the variable as well as the flag for chrome-context scripts.
+  env: { ...process.env, MOZ_CRASHREPORTER_DISABLE: "1", MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: "1" },
 });
 let client;
 try {
@@ -785,11 +786,11 @@ try {
     client,
     `
     let win = await select("orphan");
-    const undoItems = window.messenger.transactionManager.numberOfUndoItems;
+    const undoItems = MailServices.txns.transactionManager.numberOfUndoItems;
     win.commandController.doCommand("cmd_deleteMessage");
     await until(() => has("Trash", "orphan"), "orphan copied to Trash");
     // Undo would expunge the Trash copy, which Proton deletes for good.
-    if (window.messenger.transactionManager.numberOfUndoItems != undoItems) throw new Error("orphan copy is undoable");
+    if (MailServices.txns.transactionManager.numberOfUndoItems != undoItems) throw new Error("orphan copy is undoable");
     await until(() => cell("allMailPlusLocation", "All Mail", "orphan") == "Trash", "orphan location");
     win = await select("orphanmove");
     win.commandController.doCommand("cmd_moveMessage", folder("Folders/Shops"));

@@ -4,7 +4,7 @@
 
 **Act on the real folder of every message in Proton's All Mail view.**
 
-![Thunderbird](https://img.shields.io/badge/Thunderbird-153%20ESR-0A84FF)
+![Thunderbird](https://img.shields.io/badge/Thunderbird-153%20to%20160-0A84FF)
 ![Proton](https://img.shields.io/badge/Proton-Mail%20Bridge-6D4AFF)
 ![Status](https://img.shields.io/badge/Status-stable-brightgreen)
 
@@ -23,7 +23,7 @@ Thunderbird add-on for Proton Mail Bridge. Inside Proton's **All Mail** folder i
 Every other folder and account keeps Thunderbird's native behavior. Feasibility,
 design and the matching rules are described in [PLAN.md](PLAN.md).
 
-Built and tested against Thunderbird 153.6.
+Built and tested against Thunderbird 153.6 ESR and 160.0.
 
 ## 📦 Install
 

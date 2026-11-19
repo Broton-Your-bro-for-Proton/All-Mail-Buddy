@@ -1012,7 +1012,18 @@ const controller = {
     try {
       const { FolderCommands } = ChromeUtils.importESModule("chrome://messenger/content/FolderCommands.mjs");
       if (FolderCommands?.rebuildFolderSummary) {
-        return folder => FolderCommands.rebuildFolderSummary(folder);
+        return async folder => {
+          try {
+            await FolderCommands.rebuildFolderSummary(folder);
+          } catch (e) {
+            // Since Thunderbird 160 the module ends with top.msgWindow, which a
+            // module has no top for; only that last reload is left to do.
+            if (e?.name != "ReferenceError") {
+              throw e;
+            }
+            folder.updateFolder(this.msgWindow());
+          }
+        };
       }
     } catch {}
     return null;
@@ -1799,7 +1810,8 @@ const controller = {
     }
     const hdrs = [];
     for (let i = 0; i < transfer.mozItemCount; i++) {
-      hdrs.push(win.top.messenger.msgHdrFromURI(transfer.mozGetDataAt("text/x-moz-message", i)));
+      const uri = transfer.mozGetDataAt("text/x-moz-message", i);
+      hdrs.push(MailServices.messageServiceFromURI(uri).messageURIToMsgHdr(uri));
     }
     const row = event.target.closest?.("li");
     if (!row || !hdrs.some(hdr => this.isAllMail(hdr.folder))) {
