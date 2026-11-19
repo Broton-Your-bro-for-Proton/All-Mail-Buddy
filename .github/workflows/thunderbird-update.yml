@@ -1,0 +1,84 @@
+name: thunderbird-update
+
+# Daily: when Thunderbird ships a major version above strict_max_version,
+# raise the cap, run the e2e suite against that release and the current ESR,
+# and open a candidate PR with the tested XPI as an artifact of this run.
+# It never publishes; release.yml does. Pause with UPDATE_AGENT=false.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: thunderbird-update
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    if: vars.UPDATE_AGENT != 'false' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # required to push the candidate branch
+      pull-requests: write # required to open the candidate PR, never to merge it
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: plan
+        run: node scripts/thunderbird-candidate.mjs
+      - id: open
+        if: steps.plan.outputs.major != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: automation/thunderbird-${{ steps.plan.outputs.major }}
+        run: |
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          # Repeated runs converge on one candidate per major version.
+          if git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Unit tests
+        if: steps.plan.outputs.major != '' && steps.open.outputs.exists != 'true'
+        run: npm test
+      - name: e2e against the new release
+        if: steps.plan.outputs.major != '' && steps.open.outputs.exists != 'true'
+        env:
+          TB: ${{ steps.plan.outputs.latest }}
+        run: node scripts/fetch-thunderbird.mjs "$TB" && node test/e2e/run.mjs ".cache/thunderbird/$TB/core/thunderbird.exe"
+      - name: e2e against the current ESR
+        if: steps.plan.outputs.major != '' && steps.open.outputs.exists != 'true'
+        env:
+          TB: ${{ steps.plan.outputs.esr }}
+        run: node scripts/fetch-thunderbird.mjs "$TB" && node test/e2e/run.mjs ".cache/thunderbird/$TB/core/thunderbird.exe"
+      - name: Build
+        if: steps.plan.outputs.major != '' && steps.open.outputs.exists != 'true'
+        run: node scripts/build.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.plan.outputs.major != '' && steps.open.outputs.exists != 'true'
+        with:
+          name: xpi
+          path: dist/allmail-buddy-${{ steps.plan.outputs.version }}.xpi
+          if-no-files-found: error
+      - name: Open the candidate PR
+        if: steps.plan.outputs.major != '' && steps.open.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.open.outputs.branch }}
+          LATEST: ${{ steps.plan.outputs.latest }}
+          ESR: ${{ steps.plan.outputs.esr }}
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add src/manifest.json package.json updates.json
+          git commit -m "Support Thunderbird ${LATEST%%.*}"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "Support Thunderbird ${LATEST%%.*}" \
+            --body "Raises strict_max_version to ${LATEST%%.*}.* and releases ${VERSION}. The e2e suite passed against Thunderbird ${LATEST} and ${ESR} in run ${GITHUB_RUN_ID}, which holds the tested XPI."
