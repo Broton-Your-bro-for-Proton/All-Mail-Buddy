@@ -21,3 +21,21 @@
 - After the merge, publish a GitHub release `v<version>` with
   `dist/allmail-buddy-<version>.xpi` attached. Installed copies update from
   `updates.json` on `main` (the manifest's `update_url`).
+
+## Upstream automation
+
+| Upstream | Kind | Intake | Release |
+|---|---|---|---|
+| Thunderbird (product-details.mozilla.org) | Dependency (host application) | `.github/workflows/thunderbird-update.yml`, daily on Windows, candidate PR from `automation/thunderbird-<major>` to `main` | Automatic through `.github/workflows/release.yml` |
+
+- Protected features: everything the add-on does in All Mail is proven by
+  `test/e2e/run.mjs`, run against the new Thunderbird release and the
+  current ESR on the exact candidate; `npm test` covers the pure logic.
+- Agent run: `.github/workflows/update-agent.yml`, daily, only when a
+  candidate, a failed intake run or an unreleased version waits. It repairs
+  add-on code, merges its own fix PRs and releases only through
+  `release.yml`.
+- Recovery: run `release.yml` again with the same `pr` and `run_id`.
+- Pause: repository variable `UPDATE_AGENT=false`.
+- Releases made by this automation need no confirmation. Everything else
+  that touches the release path does.

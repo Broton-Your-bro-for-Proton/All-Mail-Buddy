@@ -1,0 +1,75 @@
+name: release
+
+# Merges a candidate PR from thunderbird-update and publishes the exact XPI
+# that run tested. Also the recovery path: rerun with the same inputs after
+# a failure; a merged PR is not merged again.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Candidate PR number
+        required: true
+        type: string
+      run_id:
+        description: thunderbird-update run that tested this candidate
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: thunderbird-update
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to merge the candidate and publish the release
+      pull-requests: write # required to merge the candidate PR, never to approve it
+      actions: read # required to read the tested run and its XPI
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ inputs.pr }}
+      RUN_ID: ${{ inputs.run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check the tested run
+        id: run
+        run: |
+          set -euo pipefail
+          read -r name conclusion sha < <(gh run view "$RUN_ID" --json workflowName,conclusion,headSha \
+            --jq '"\(.workflowName) \(.conclusion) \(.headSha)"')
+          [[ "$name" == thunderbird-update && "$conclusion" == success ]] || { echo "Run $RUN_ID is not a green thunderbird-update run"; exit 1; }
+          read -r state head < <(gh pr view "$PR" --json state,headRefOid --jq '"\(.state) \(.headRefOid)"')
+          # The candidate commit is the PR head; its parent is the run's checkout.
+          [[ "$(git rev-parse "$head^")" == "$sha" ]] || { echo "PR $PR was not built by run $RUN_ID"; exit 1; }
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+      - name: Merge the candidate
+        if: steps.run.outputs.state == 'OPEN'
+        env:
+          HEAD: ${{ steps.run.outputs.head }}
+        run: gh pr merge "$PR" --squash --delete-branch --match-head-commit "$HEAD"
+      - name: Publish the tested XPI
+        env:
+          HEAD: ${{ steps.run.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch -q origin main "$HEAD"
+          # The released add-on must be the tested one.
+          [[ "$(git rev-parse origin/main:src)" == "$(git rev-parse "$HEAD:src")" ]] || { echo "main differs from the candidate"; exit 1; }
+          version="$(git show origin/main:src/manifest.json | jq -r .version)"
+          gh run download "$RUN_ID" --name xpi --dir dist
+          test -f "dist/allmail-buddy-${version}.xpi"
+          if gh release view "v${version}" > /dev/null 2>&1; then
+            echo "v${version} is already published"
+          else
+            gh release create "v${version}" "dist/allmail-buddy-${version}.xpi" \
+              --target "$(git rev-parse origin/main)" --title "v${version}" --generate-notes --latest
+          fi
