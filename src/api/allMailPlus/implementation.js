@@ -76,6 +76,7 @@ const controller = {
   timers: new Map(),
   timerStarts: new Map(), // debounce name -> time of the first call since it last ran
   scanning: new Set(), // folder uris whose snapshot is being taken
+  scans: new Map(), // folder uri -> {account, scan} running, so a folder is never read twice at once
   dirty: new Set(), // folder uris that changed during their snapshot
   pendingSync: false,
   refreshedAt: new Map(), // folder uri -> time of the last targeted sync
@@ -146,6 +147,7 @@ const controller = {
     this.timers.clear();
     this.timerStarts.clear();
     this.scanning.clear();
+    this.scans.clear();
     this.dirty.clear();
     this.refreshedAt.clear();
     clearTimeout(this.checkTimer);
@@ -333,7 +335,7 @@ const controller = {
         realUris: new Set(),
         fullySynced: false,
         coverage: null,
-        unreadable: new Set(),
+        unreadable: new Map(), // folder uri -> name
         error: "",
       });
       this.initColumnState(allMail);
@@ -404,7 +406,23 @@ const controller = {
   },
 
   scanFolder(account, folder) {
-    return this.timed(`read ${this.describe(folder).name}`, () => this.readFolder(account, folder));
+    const running = this.scans.get(folder.URI);
+    if (running?.account === account) {
+      // Its snapshot may predate the change that asked for this scan, so it runs again afterwards.
+      this.dirty.add(folder.URI);
+      return running.scan;
+    }
+    if (running) {
+      // A rebuild's new index must get the folder itself, after the scan for the old one.
+      return running.scan.then(() => this.scanFolder(account, folder));
+    }
+    const scan = this.timed(`read ${this.describe(folder).name}`, () => this.readFolder(account, folder)).finally(() => {
+      if (this.scans.get(folder.URI)?.scan === scan) {
+        this.scans.delete(folder.URI);
+      }
+    });
+    this.scans.set(folder.URI, { account, scan });
+    return scan;
   },
 
   async readFolder(account, folder) {
@@ -415,11 +433,12 @@ const controller = {
     try {
       db = folder.msgDatabase;
     } catch {
+      account.unreadable.set(folder.URI, info.name);
       account.index.setFolder(folder.URI, info, []);
-      account.unreadable.add(info.name);
       return;
     }
-    account.unreadable.delete(info.name);
+    // By uri: Folders/Work and Labels/Work share a name.
+    account.unreadable.delete(folder.URI);
     const keys = db.listAllKeys();
     this.scanning.add(folder.URI);
     const entries = [];
@@ -544,7 +563,12 @@ const controller = {
         if (i % 500 == 499) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
-        const hdr = db.getMsgHdrForKey(keys[i]);
+        let hdr;
+        try {
+          hdr = db.getMsgHdrForKey(keys[i]);
+        } catch {
+          continue; // removed meanwhile, as in readFolder
+        }
         const entry = this.entryOf(hdr);
         const result = account.index.resolve(entry);
         coverage[result.status]++;
@@ -573,7 +597,16 @@ const controller = {
           countMissing(entry, result);
         }
       }
-    } catch {}
+    } catch (e) {
+      // A partial count would show too few problems and hide orphans: keep the last full one, and try once more.
+      console.error(e);
+      if (!account.countFailed) {
+        account.countFailed = true;
+        this.coverageLater(account);
+      }
+      return;
+    }
+    account.countFailed = false;
     // As many identical copies as All Mail entries, for example a duplicate or a message
     // sent to yourself: pair them in key order. They are the same message, so which
     // copy goes with which entry does not matter; the column and actions agree on it.
@@ -742,7 +775,7 @@ const controller = {
 
   async checkChanges(account) {
     const busy = account.checking || this.repairing.has(account.server.key);
-    if (account.server.type != "imap" || account.state != "ready" || busy) {
+    if (account.server.type != "imap" || account.state != "ready" || busy || Services.io.offline) {
       return;
     }
     account.checking = true;
@@ -776,6 +809,9 @@ const controller = {
     for (const folder of changed) {
       if (await this.updateFolder(folder)) {
         this.markSynced(folder);
+      } else {
+        // Not loaded: the next check must see the change again instead of taking the folder as synced.
+        this.statusSeen.delete(folder.URI);
       }
       if (folder != account.allMail) {
         await this.scanFolder(account, folder);
@@ -1229,7 +1265,7 @@ const controller = {
 
   updateFolder(folder) {
     return this.timed(`load ${this.describe(folder).name} from the server`, () =>
-      this.urlDone(listener => folder.updateFolderWithListener(null, listener), 60000)
+      this.urlDone(listener => folder.QueryInterface(Ci.nsIMsgImapMailFolder).updateFolderWithListener(null, listener), 60000)
     );
   },
 
@@ -1317,7 +1353,10 @@ const controller = {
         return;
       }
       controller.loadWaiters.get(folder.URI)?.(true);
-      controller.markSynced(folder);
+      // Offline Thunderbird loads the local list only, which says nothing about the server.
+      if (!Services.io.offline) {
+        controller.markSynced(folder);
+      }
       if (controller.config.diagnostics && controller.accountFor(folder)) {
         controller.diagnose(`Thunderbird finished loading ${folder.localizedName}`);
       }
@@ -1867,6 +1906,7 @@ const controller = {
     const orphans = [];
     let failed = 0;
     let waiting = 0;
+    let broken = null; // an account whose index failed, so no match is trusted there
     let close = 0;
     const paired = []; // [All Mail header, real copy] for entries paired with a copy
     for (const hdr of hdrs) {
@@ -1879,6 +1919,10 @@ const controller = {
         }
         if (!account.fullySynced && account.index.resolve(this.entryOf(hdr)).status == "nofolder") {
           waiting++;
+          continue;
+        }
+        if (account.state == "error") {
+          broken = account;
           continue;
         }
         const verified = this.verifiedMatch(account, hdr);
@@ -1898,7 +1942,7 @@ const controller = {
       list.push(real);
       groups.set(real.folder, list);
     }
-    return { groups, orphans, failed, waiting, close, paired };
+    return { groups, orphans, failed, waiting, close, paired, broken };
   },
 
   isOrphan(account, hdr) {
@@ -1971,7 +2015,8 @@ const controller = {
     const result = account.index.resolve(entry);
     const paired = result.status == "unique" ? null : this.pairedMatch(account, hdr, result);
     const match = result.status == "unique" ? result.matches[0] : paired?.copy;
-    if (account.state == "indexing" || !match) {
+    // After an error the index lacks folders, so a match there may not be the only copy.
+    if (!["ready", "syncing"].includes(account.state) || !match) {
       return null;
     }
     const { uri, key } = match;
@@ -2170,7 +2215,15 @@ const controller = {
   },
 
   async runAction(win, command, hdrs, destFolder, { confirm = true } = {}) {
-    const { groups, orphans, failed, waiting, close, paired } = this.resolveReal(hdrs);
+    const { groups, orphans, failed, waiting, close, paired, broken } = this.resolveReal(hdrs);
+    if (broken) {
+      this.rebuildLater(broken.allMail);
+      this.notice(
+        `Reading the folders of ${broken.name} failed (${broken.error}), so the add-on cannot tell where the ` +
+          "selected messages really are. Nothing was changed. The index is being built again; try again in a minute."
+      );
+      return;
+    }
     if (waiting) {
       this.notice(
         `${waiting} of ${hdrs.length} selected messages show no folder yet, but not every folder has been loaded ` +
@@ -2358,6 +2411,10 @@ const controller = {
         continue;
       }
       if (settings.manualMarkMode == Ci.nsISpamSettings.MANUAL_MARK_MODE_DELETE) {
+        // In Trash a delete is for good, which marking as junk must not do without asking.
+        if (folder.isSpecialFolder(Flags.Trash, true)) {
+          continue;
+        }
         folder.deleteMessages(list, msgWindow, false, false, listener, true);
         moved = true;
         continue;
@@ -2493,7 +2550,7 @@ const controller = {
           state: account?.state ?? (enabled ? "pending" : "disabled"),
           lastSync: account?.lastSync ?? null,
           coverage: account?.coverage ?? null,
-          unreadable: [...(account?.unreadable ?? [])],
+          unreadable: [...(account?.unreadable?.values() ?? [])],
           serverCheck: account?.serverCheck ?? null,
           lastServerCheck: this.checkState().last[server.key] ?? 0,
           fullySynced: account?.fullySynced ?? false,

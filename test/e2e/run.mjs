@@ -104,6 +104,7 @@ const M = {
   row: message("row", "Row button delete"),
   tab: message("tab", "Delete from message tab"),
   junkstay: message("junkstay", "Junk without move"),
+  junktrash: message("junktrash", "Junk in Trash"),
   sized: message("sized", "Size differs"),
   dup: message("dup", "Listed twice"),
   pair: message("pair", "Duplicate in one folder"),
@@ -122,7 +123,7 @@ const layout = {
   Inbox: [M.hello, M.meeting, M.spam, M.twin, M.drag, M.label, M.native, M.tab, M.junkstay, sizedOther, closeOther],
   Sent: [M.twin],
   Spam: [M.restore],
-  Trash: [],
+  Trash: [M.junktrash],
   Archive: [],
   Folders: [],
   "Folders.sbd/Finanzen": [M.invoice, M.row, M.dup, M.pair, M.pair],
@@ -837,6 +838,23 @@ try {
       if (win.threadTree.selectedIndex != before) throw new Error("selection moved");
     } finally {
       Services.prefs.setBoolPref("mail.spam.manualMark", true);
+    }
+    `
+  );
+
+  await check(
+    "Junk with the delete setting does not delete a copy in Trash for good",
+    client,
+    `
+    Services.prefs.setIntPref("mail.spam.manualMarkMode", Ci.nsISpamSettings.MANUAL_MARK_MODE_DELETE);
+    try {
+      const win = await select("junktrash");
+      win.commandController.doCommand("cmd_markAsJunk");
+      await until(() => hdr("Trash", "junktrash").getStringProperty("junkscore") == "100", "real score");
+      await sleep(800);
+      if (!has("Trash", "junktrash")) throw new Error("deleted from Trash");
+    } finally {
+      Services.prefs.setIntPref("mail.spam.manualMarkMode", Ci.nsISpamSettings.MANUAL_MARK_MODE_MOVE);
     }
     `
   );
