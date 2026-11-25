@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "資料夾"
+  },
+  "columnLabels": {
+    "message": "標籤"
+  },
+  "noFolder": {
+    "message": "無資料夾"
+  },
+  "extensionDescription": {
+    "message": "顯示 Proton Mail Bridge 的 All Mail 資料夾中每封郵件的真實資料夾，並使刪除、移動、封存和垃圾郵件操作作用於真實的郵件。"
+  }
+}

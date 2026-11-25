@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Mappe"
+  },
+  "columnLabels": {
+    "message": "Etikettar"
+  },
+  "noFolder": {
+    "message": "Inga mappe"
+  },
+  "extensionDescription": {
+    "message": "Viser den ekte mappa til kvar melding i All Mail-mappa til Proton Mail Bridge og lèt sletting, flytting, arkivering og søppelpost verka på den ekte meldinga."
+  }
+}

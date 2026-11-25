@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "پوشه"
+  },
+  "columnLabels": {
+    "message": "برچسب‌ها"
+  },
+  "noFolder": {
+    "message": "بدون پوشه"
+  },
+  "extensionDescription": {
+    "message": "پوشهٔ واقعی هر پیام در پوشهٔ All Mail مربوط به Proton Mail Bridge را نشان می‌دهد و باعث می‌شود حذف، انتقال، بایگانی و هرزنامه روی پیام واقعی عمل کنند."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Folder"
+  },
+  "columnLabels": {
+    "message": "Label"
+  },
+  "noFolder": {
+    "message": "Tiada folder"
+  },
+  "extensionDescription": {
+    "message": "Memaparkan folder sebenar bagi setiap mesej dalam folder All Mail Proton Mail Bridge dan membuatkan padam, alih, arkib dan sampah bertindak pada mesej sebenar."
+  }
+}

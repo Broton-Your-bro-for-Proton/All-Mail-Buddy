@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Carpeta"
+  },
+  "columnLabels": {
+    "message": "Etiquetas"
+  },
+  "noFolder": {
+    "message": "Sin carpeta"
+  },
+  "extensionDescription": {
+    "message": "Muestra la carpeta real de cada mensaje de la carpeta All Mail de Proton Mail Bridge y hace que eliminar, mover, archivar y correo no deseado actúen sobre el mensaje real."
+  }
+}

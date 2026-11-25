@@ -1,5 +1,14 @@
 {
-  "columnFolder": { "message": "Folder" },
-  "columnLabels": { "message": "Labels" },
-  "noFolder": { "message": "No folder" }
+  "columnFolder": {
+    "message": "Folder"
+  },
+  "columnLabels": {
+    "message": "Labels"
+  },
+  "noFolder": {
+    "message": "No folder"
+  },
+  "extensionDescription": {
+    "message": "Shows the real folder of every message in Proton Mail Bridge's All Mail folder and makes delete, move, archive and junk act on the real message."
+  }
 }

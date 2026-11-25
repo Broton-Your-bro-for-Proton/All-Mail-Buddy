@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "ফোল্ডার"
+  },
+  "columnLabels": {
+    "message": "লেবেল"
+  },
+  "noFolder": {
+    "message": "ফোল্ডার নেই"
+  },
+  "extensionDescription": {
+    "message": "Proton Mail Bridge-এর All Mail ফোল্ডারে প্রতিটি বার্তার আসল ফোল্ডার দেখায় এবং মোছা, সরানো, আর্কাইভ ও জাঙ্ককে আসল বার্তার ওপর কাজ করায়।"
+  }
+}

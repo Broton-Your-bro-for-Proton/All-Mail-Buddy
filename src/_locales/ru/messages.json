@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Папка"
+  },
+  "columnLabels": {
+    "message": "Метки"
+  },
+  "noFolder": {
+    "message": "Нет папки"
+  },
+  "extensionDescription": {
+    "message": "Показывает настоящую папку каждого письма в папке All Mail Proton Mail Bridge и заставляет удаление, перемещение, архивирование и отправку в спам действовать с настоящим письмом."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "โฟลเดอร์"
+  },
+  "columnLabels": {
+    "message": "ป้ายกำกับ"
+  },
+  "noFolder": {
+    "message": "ไม่มีโฟลเดอร์"
+  },
+  "extensionDescription": {
+    "message": "แสดงโฟลเดอร์จริงของทุกข้อความในโฟลเดอร์ All Mail ของ Proton Mail Bridge และทำให้การลบ ย้าย เก็บถาวร และขยะทำกับข้อความจริง"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "საქაღალდე"
+  },
+  "columnLabels": {
+    "message": "ლეიბლები"
+  },
+  "noFolder": {
+    "message": "საქაღალდის გარეშე"
+  },
+  "extensionDescription": {
+    "message": "აჩვენებს თითოეული შეტყობინების რეალურ საქაღალდეს Proton Mail Bridge-ის All Mail საქაღალდეში და წაშლას, გადატანას, დაარქივებას და უსარგებლო ფოსტას რეალურ შეტყობინებაზე ასრულებს."
+  }
+}

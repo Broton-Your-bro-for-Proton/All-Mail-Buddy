@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "フォルダー"
+  },
+  "columnLabels": {
+    "message": "ラベル"
+  },
+  "noFolder": {
+    "message": "フォルダーなし"
+  },
+  "extensionDescription": {
+    "message": "Proton Mail Bridge の All Mail フォルダー内の各メッセージの実際のフォルダーを表示し、削除、移動、アーカイブ、迷惑メールを実際のメッセージに対して実行します。"
+  }
+}

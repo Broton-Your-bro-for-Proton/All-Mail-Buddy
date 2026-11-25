@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "المجلد"
+  },
+  "columnLabels": {
+    "message": "التسميات"
+  },
+  "noFolder": {
+    "message": "بلا مجلد"
+  },
+  "extensionDescription": {
+    "message": "يعرض المجلد الحقيقي لكل رسالة في مجلد All Mail الخاص بـ Proton Mail Bridge ويجعل الحذف والنقل والأرشفة والبريد المزعج تعمل على الرسالة الحقيقية."
+  }
+}

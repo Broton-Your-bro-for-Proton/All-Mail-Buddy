@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Karpeta"
+  },
+  "columnLabels": {
+    "message": "Etiketak"
+  },
+  "noFolder": {
+    "message": "Karpetarik ez"
+  },
+  "extensionDescription": {
+    "message": "Proton Mail Bridge-ren All Mail karpetako mezu bakoitzaren benetako karpeta erakusten du eta ezabatzeak, mugitzeak, artxibatzeak eta spam-ak benetako mezuan jardutea eragiten du."
+  }
+}

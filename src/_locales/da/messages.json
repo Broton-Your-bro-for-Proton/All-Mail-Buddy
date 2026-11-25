@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Mappe"
+  },
+  "columnLabels": {
+    "message": "Labels"
+  },
+  "noFolder": {
+    "message": "Ingen mappe"
+  },
+  "extensionDescription": {
+    "message": "Viser den rigtige mappe for hver besked i Proton Mail Bridges All Mail-mappe og får slet, flyt, arkivér og spam til at virke på den rigtige besked."
+  }
+}

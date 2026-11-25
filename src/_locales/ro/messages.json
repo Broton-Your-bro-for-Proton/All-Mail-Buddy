@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Dosar"
+  },
+  "columnLabels": {
+    "message": "Etichete"
+  },
+  "noFolder": {
+    "message": "Fără dosar"
+  },
+  "extensionDescription": {
+    "message": "Arată dosarul real al fiecărui mesaj din dosarul All Mail al Proton Mail Bridge și face ca ștergerea, mutarea, arhivarea și marcarea ca spam să acționeze asupra mesajului real."
+  }
+}

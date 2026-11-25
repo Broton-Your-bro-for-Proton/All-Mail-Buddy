@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "폴더"
+  },
+  "columnLabels": {
+    "message": "레이블"
+  },
+  "noFolder": {
+    "message": "폴더 없음"
+  },
+  "extensionDescription": {
+    "message": "Proton Mail Bridge의 All Mail 폴더에 있는 모든 메시지의 실제 폴더를 표시하고, 삭제, 이동, 보관, 정크가 실제 메시지에 적용되게 합니다."
+  }
+}

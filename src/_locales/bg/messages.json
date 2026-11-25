@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Папка"
+  },
+  "columnLabels": {
+    "message": "Етикети"
+  },
+  "noFolder": {
+    "message": "Без папка"
+  },
+  "extensionDescription": {
+    "message": "Показва истинската папка на всяко съобщение в папката All Mail на Proton Mail Bridge и кара изтриването, преместването, архивирането и спама да действат върху истинското съобщение."
+  }
+}

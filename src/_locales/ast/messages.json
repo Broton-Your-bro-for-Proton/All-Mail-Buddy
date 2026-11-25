@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Carpeta"
+  },
+  "columnLabels": {
+    "message": "Etiquetes"
+  },
+  "noFolder": {
+    "message": "Ensin carpeta"
+  },
+  "extensionDescription": {
+    "message": "Amuesa la carpeta real de cada mensaxe na carpeta All Mail de Proton Mail Bridge y fai que desaniciar, mover, archivar y corréu puxarra actúen sobro'l mensaxe real."
+  }
+}

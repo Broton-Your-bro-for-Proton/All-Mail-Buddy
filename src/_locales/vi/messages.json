@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Thư mục"
+  },
+  "columnLabels": {
+    "message": "Nhãn"
+  },
+  "noFolder": {
+    "message": "Không có thư mục"
+  },
+  "extensionDescription": {
+    "message": "Hiện thư mục thật của mọi thư trong thư mục All Mail của Proton Mail Bridge và làm cho xóa, di chuyển, lưu trữ và thư rác tác động lên thư thật."
+  }
+}

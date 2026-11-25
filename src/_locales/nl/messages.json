@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Map"
+  },
+  "columnLabels": {
+    "message": "Labels"
+  },
+  "noFolder": {
+    "message": "Geen map"
+  },
+  "extensionDescription": {
+    "message": "Toont de echte map van elk bericht in de map All Mail van Proton Mail Bridge en laat verwijderen, verplaatsen, archiveren en ongewenst markeren op het echte bericht werken."
+  }
+}
