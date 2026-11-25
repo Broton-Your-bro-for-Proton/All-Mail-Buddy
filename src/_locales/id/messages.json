@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Folder"
+  },
+  "columnLabels": {
+    "message": "Label"
+  },
+  "noFolder": {
+    "message": "Tanpa folder"
+  },
+  "extensionDescription": {
+    "message": "Menampilkan folder asli setiap pesan di folder All Mail milik Proton Mail Bridge dan membuat hapus, pindah, arsip, dan sampah bekerja pada pesan yang asli."
+  }
+}

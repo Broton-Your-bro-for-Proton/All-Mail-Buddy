@@ -1,6 +1,7 @@
 # Agent notes
 
-- Language for code, comments, UI texts, commits and docs: American English.
+- Language for code, comments, UI source texts, commits and docs: American English.
+- The UI is translated into the store's 56 languages (`LOCALES` in `src/lib/i18n.js`). English is the key in `t("...")`; each language has `src/locales/<code>.json` and `src/_locales/<code>/messages.json`. The experiment gets the catalog with its config. Every new UI text gets an entry in every catalog; `npm test` fails otherwise (`scripts/i18n-keys.mjs`, `test/i18n.test.js`). The diagnostics log stays English.
 
 ## README style
 

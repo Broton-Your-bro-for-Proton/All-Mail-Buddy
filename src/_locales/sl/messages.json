@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Mapa"
+  },
+  "columnLabels": {
+    "message": "Oznake"
+  },
+  "noFolder": {
+    "message": "Brez mape"
+  },
+  "extensionDescription": {
+    "message": "Prikaže pravo mapo vsakega sporočila v mapi All Mail storitve Proton Mail Bridge in poskrbi, da brisanje, premikanje, arhiviranje in vsiljena pošta učinkujejo na pravo sporočilo."
+  }
+}

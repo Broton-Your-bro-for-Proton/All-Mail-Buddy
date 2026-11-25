@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Klasör"
+  },
+  "columnLabels": {
+    "message": "Etiketler"
+  },
+  "noFolder": {
+    "message": "Klasör yok"
+  },
+  "extensionDescription": {
+    "message": "Proton Mail Bridge’in All Mail klasöründeki her iletinin gerçek klasörünü gösterir ve sil, taşı, arşivle ve gereksiz işlemlerinin gerçek ileti üzerinde çalışmasını sağlar."
+  }
+}

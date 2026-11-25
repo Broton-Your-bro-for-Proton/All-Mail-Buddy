@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Тека"
+  },
+  "columnLabels": {
+    "message": "Мітки"
+  },
+  "noFolder": {
+    "message": "Немає теки"
+  },
+  "extensionDescription": {
+    "message": "Показує справжню теку кожного листа в теці All Mail у Proton Mail Bridge і змушує видалення, переміщення, архівування та спам діяти на справжній лист."
+  }
+}

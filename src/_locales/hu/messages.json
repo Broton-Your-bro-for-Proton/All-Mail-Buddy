@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Mappa"
+  },
+  "columnLabels": {
+    "message": "Címkék"
+  },
+  "noFolder": {
+    "message": "Nincs mappa"
+  },
+  "extensionDescription": {
+    "message": "Megjeleníti a Proton Mail Bridge All Mail mappájában lévő minden üzenet valódi mappáját, és a törlést, az áthelyezést, az archiválást és a levélszemétnek jelölést a valódi üzeneten végzi."
+  }
+}

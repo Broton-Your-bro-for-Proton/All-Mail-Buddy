@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Mapp"
+  },
+  "columnLabels": {
+    "message": "Etiketter"
+  },
+  "noFolder": {
+    "message": "Ingen mapp"
+  },
+  "extensionDescription": {
+    "message": "Visar den riktiga mappen för varje meddelande i Proton Mail Bridges All Mail-mapp och låter ta bort, flytta, arkivera och skräppost agera på det riktiga meddelandet."
+  }
+}

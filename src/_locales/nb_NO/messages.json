@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Mappe"
+  },
+  "columnLabels": {
+    "message": "Etiketter"
+  },
+  "noFolder": {
+    "message": "Ingen mappe"
+  },
+  "extensionDescription": {
+    "message": "Viser den virkelige mappen til hver melding i Proton Mail Bridges All Mail-mappe og får slett, flytt, arkiver og søppelpost til å virke på den virkelige meldingen."
+  }
+}

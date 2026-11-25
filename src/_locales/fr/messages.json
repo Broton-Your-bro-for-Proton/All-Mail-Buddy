@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Dossier"
+  },
+  "columnLabels": {
+    "message": "Libellés"
+  },
+  "noFolder": {
+    "message": "Sans dossier"
+  },
+  "extensionDescription": {
+    "message": "Affiche le dossier réel de chaque message du dossier All Mail de Proton Mail Bridge et fait agir la suppression, le déplacement, l’archivage et le classement en indésirable sur le message réel."
+  }
+}

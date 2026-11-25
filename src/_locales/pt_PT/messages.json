@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Pasta"
+  },
+  "columnLabels": {
+    "message": "Etiquetas"
+  },
+  "noFolder": {
+    "message": "Sem pasta"
+  },
+  "extensionDescription": {
+    "message": "Mostra a pasta real de cada mensagem na pasta All Mail do Proton Mail Bridge e faz com que eliminar, mover, arquivar e lixo atuem sobre a mensagem real."
+  }
+}

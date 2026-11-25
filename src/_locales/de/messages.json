@@ -1,5 +1,14 @@
 {
-  "columnFolder": { "message": "Ordner" },
-  "columnLabels": { "message": "Labels" },
-  "noFolder": { "message": "Kein Ordner" }
+  "columnFolder": {
+    "message": "Ordner"
+  },
+  "columnLabels": {
+    "message": "Labels"
+  },
+  "noFolder": {
+    "message": "Kein Ordner"
+  },
+  "extensionDescription": {
+    "message": "Zeigt den echten Ordner jeder Nachricht im Ordner All Mail von Proton Mail Bridge und lässt Löschen, Verschieben, Archivieren und Junk auf die echte Nachricht wirken."
+  }
 }

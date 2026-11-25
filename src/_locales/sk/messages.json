@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Priečinok"
+  },
+  "columnLabels": {
+    "message": "Štítky"
+  },
+  "noFolder": {
+    "message": "Bez priečinka"
+  },
+  "extensionDescription": {
+    "message": "Zobrazuje skutočný priečinok každej správy v priečinku All Mail služby Proton Mail Bridge a zabezpečí, aby odstránenie, presun, archivácia a nevyžiadaná pošta pôsobili na skutočnú správu."
+  }
+}

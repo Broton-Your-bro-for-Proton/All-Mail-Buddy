@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "文件夹"
+  },
+  "columnLabels": {
+    "message": "标签"
+  },
+  "noFolder": {
+    "message": "无文件夹"
+  },
+  "extensionDescription": {
+    "message": "显示 Proton Mail Bridge 的 All Mail 文件夹中每封邮件的真实文件夹，并使删除、移动、归档和垃圾邮件操作作用于真实的邮件。"
+  }
+}

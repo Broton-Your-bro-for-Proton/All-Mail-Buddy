@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Folder"
+  },
+  "columnLabels": {
+    "message": "Etykiety"
+  },
+  "noFolder": {
+    "message": "Brak folderu"
+  },
+  "extensionDescription": {
+    "message": "Pokazuje prawdziwy folder każdej wiadomości w folderze All Mail programu Proton Mail Bridge i sprawia, że usuwanie, przenoszenie, archiwizowanie i oznaczanie jako spam działają na prawdziwej wiadomości."
+  }
+}

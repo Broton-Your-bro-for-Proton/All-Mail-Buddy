@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Kansio"
+  },
+  "columnLabels": {
+    "message": "Tunnisteet"
+  },
+  "noFolder": {
+    "message": "Ei kansiota"
+  },
+  "extensionDescription": {
+    "message": "Näyttää jokaisen Proton Mail Bridgen All Mail -kansion viestin oikean kansion ja saa poiston, siirron, arkistoinnin ja roskapostin toimimaan oikealle viestille."
+  }
+}

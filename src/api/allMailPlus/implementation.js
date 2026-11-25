@@ -41,7 +41,6 @@ const STATUS_TOPIC = "allmailplus-status";
 const SEARCH_CHUNK = 100; // Message-IDs per IMAP SEARCH
 const REPAIR_LIMIT = 25; // folders per click on "Repair folders"
 const MAX_SEARCH_IDS = 500; // Message-IDs per server check run
-const VERIFY_LABEL = "Check messages on the server"; // as in the settings
 const STATE_PREF = "extensions.allmailplus.serverCheck"; // JSON, see checkState()
 const resourceHandler = () =>
   Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsISubstitutingProtocolHandler);
@@ -60,6 +59,12 @@ const mfn = Ci.nsIMsgFolderNotificationService;
 let core = null;
 let searchTerm = null;
 const emitter = new ExtensionCommon.EventEmitter();
+
+/** A UI text in Thunderbird's language, from the catalog the background page passes with the config. */
+function t(text, params) {
+  const out = controller.config?.catalog?.[text] ?? text;
+  return params ? out.replace(/\{(\w+)\}/g, (m, key) => (key in params ? String(params[key]) : m)) : out;
+}
 
 const controller = {
   started: false,
@@ -239,7 +244,7 @@ const controller = {
 
   failed(error) {
     console.error("All Mail Buddy:", error);
-    this.notice(`The action failed: ${error.message}. Some messages may already have been changed.`);
+    this.notice(t("The action failed: {error}. Some messages may already have been changed.", { error: error.message }));
   },
 
   notice(text) {
@@ -696,7 +701,7 @@ const controller = {
           ...this.describeHdr(hdr),
           uri: hdr.folder.getUriForMsg(hdr),
           problem: "close",
-          detail: `${name}: ${signed(paired.copy.size - entry.size)} bytes`,
+          detail: `${name}: ${t("{count} bytes", { count: signed(paired.copy.size - entry.size) })}`,
         });
         continue;
       }
@@ -708,14 +713,14 @@ const controller = {
         const names = [...new Set(result.candidates.map(c => account.index.folders.get(c.uri).name))];
         const off = [];
         if (closest.size != entry.size) {
-          off.push(`${signed(closest.size - entry.size)} bytes`);
+          off.push(t("{count} bytes", { count: signed(closest.size - entry.size) }));
         }
         if (closest.date != entry.date) {
-          off.push(`${signed(Math.round((closest.date - entry.date) / 1e6))} s`);
+          off.push(t("{count} seconds", { count: signed(Math.round((closest.date - entry.date) / 1e6)) }));
         }
         detail = `${names.join(", ")}: ${off.join(", ")}`;
       } else if (result.labels.length) {
-        detail = `Labels: ${result.labels.join(", ")}`;
+        detail = t("Labels: {list}", { list: result.labels.join(", ") });
       }
       list.push({ ...this.describeHdr(hdr), uri: hdr.folder.getUriForMsg(hdr), problem: result.status, detail });
     }
@@ -884,7 +889,7 @@ const controller = {
     state.last[key] = Date.now();
     this.saveCheckState(state);
     if (Services.io.offline) {
-      Object.assign(report, { running: false, finishedAt: Date.now(), error: "Thunderbird is offline." });
+      Object.assign(report, { running: false, finishedAt: Date.now(), error: t("Thunderbird is offline.") });
       return;
     }
     this.serverChecks.add(key);
@@ -931,9 +936,9 @@ const controller = {
           const now = Date.now();
           if (folder.locked || folder.getFlag(Flags.OfflineEvents)) {
             // Busy, or holds changes made offline that a repair would drop.
-            report.skipped.push(`${name} (busy)`);
+            report.skipped.push(t("{name} (busy)", { name }));
           } else if (!core.mayRepair({ auto, repairedAt: state.repaired[folder.URI], now })) {
-            report.skipped.push(`${name} (repaired this week)`);
+            report.skipped.push(t("{name} (repaired this week)", { name }));
           } else {
             try {
               if (await this.repairFolder(folder)) {
@@ -966,10 +971,10 @@ const controller = {
       console.error("All Mail Buddy:", e);
     } finally {
       if (report.failed) {
-        errors.unshift(`${report.failed} searches failed or timed out`);
+        errors.unshift(t("{count} searches failed or timed out", { count: report.failed }));
       }
       if (!alive()) {
-        errors.unshift("interrupted by a folder change or by stopping the add-on");
+        errors.unshift(t("interrupted by a folder change or by stopping the add-on"));
       }
       report.error = errors.join("; ");
       report.running = false;
@@ -1101,11 +1106,11 @@ const controller = {
     const result = { repaired: [], skipped: [], errors: [], unfixable: [], busy: "" };
     const account = this.accounts.get(key);
     if (Services.io.offline) {
-      result.busy = "Thunderbird is offline";
+      result.busy = t("Thunderbird is offline.");
       return result;
     }
     if (!account || account.state != "ready" || this.serverChecks.has(key)) {
-      result.busy = "the account is syncing, indexing or being checked";
+      result.busy = t("The account is syncing, indexing or being checked.");
       return result;
     }
     // Pauses syncs and change checks, as during a server check.
@@ -1128,16 +1133,16 @@ const controller = {
         const name = this.describe(folder).name;
         const now = Date.now();
         if (folder.locked || folder.getFlag(Flags.OfflineEvents)) {
-          result.skipped.push(`${name} (busy)`);
+          result.skipped.push(t("{name} (busy)", { name }));
         } else if (core.repairedRecently(state.repaired[uri], now)) {
-          result.skipped.push(`${name} (repaired today)`);
+          result.skipped.push(t("{name} (repaired today)", { name }));
         } else {
           try {
             const loaded = await this.repairFolder(folder);
             result.repaired.push(name);
             state.repaired[uri] = now;
             if (!loaded) {
-              result.errors.push(`${name}: still loading, it is checked again when it has finished`);
+              result.errors.push(t("{name}: still loading, it is checked again when it has finished", { name }));
             } else {
               await this.scanFolder(account, folder);
               // What survives a repair is real: do not offer this folder again for a while.
@@ -1446,7 +1451,9 @@ const controller = {
     const { text, status } = this.searchInfo(hdr);
     const wanted = value.trim().toLowerCase();
     const exact = op == Op.Is || op == Op.Isnt;
-    const hit = exact ? text.toLowerCase() == wanted || status == wanted : text.toLowerCase().includes(wanted);
+    // A search saved with the English column text keeps matching in every UI language.
+    const nofolder = status == "nofolder" && wanted == "no folder";
+    const hit = exact ? text.toLowerCase() == wanted || status == wanted || nofolder : text.toLowerCase().includes(wanted) || nofolder;
     return op == Op.Is || op == Op.Contains ? hit : !hit;
   },
 
@@ -2075,10 +2082,10 @@ const controller = {
         const searched = new Set(checked.slice(i, i + SEARCH_CHUNK).map(hdr => hdr.messageId));
         const { hits, ok } = await this.searchOnline(folder, searched);
         if (!ok) {
-          return (
-            `The server did not answer the check of "${name}". Nothing was changed. Try again, or change ` +
-            `"${VERIFY_LABEL}" in the add-on settings.`
-          );
+          return t('The server did not answer the check of "{name}". Nothing was changed. Try again, or change "{setting}" in the add-on settings.', {
+            name,
+            setting: t("Check messages on the server"),
+          });
         }
         for (const hit of hits) {
           confirmed.add(hit.key);
@@ -2089,20 +2096,12 @@ const controller = {
         if (broken) {
           // A hit whose local header is another message: the local list is wrong.
           const repairing = this.repairInBackground(folder);
-          return (
-            `In "${name}" Thunderbird's list puts a selected message under a number that holds another message ` +
-            "on the server, so the list is out of date. Nothing was changed. " +
-            (repairing
-              ? "The folder is being repaired; try again when it shows its messages again."
-              : "Repair the folder (right-click, Properties, Repair Folder) and try again.")
-          );
+          return repairing
+            ? t('In "{name}" Thunderbird\'s list puts a selected message under a number that holds another message on the server, so the list is out of date. Nothing was changed. The folder is being repaired; try again when it shows its messages again.', { name })
+            : t('In "{name}" Thunderbird\'s list puts a selected message under a number that holds another message on the server, so the list is out of date. Nothing was changed. Repair the folder (right-click, Properties, Repair Folder) and try again.', { name });
         }
         this.refreshInBackground(folder);
-        return (
-          `"${name}" changed on the server since Thunderbird last loaded it, for example because a selected ` +
-          "message was moved or deleted in another app. Nothing was changed. The folder is being loaded again; " +
-          "try again in a moment."
-        );
+        return t('"{name}" changed on the server since Thunderbird last loaded it, for example because a selected message was moved or deleted in another app. Nothing was changed. The folder is being loaded again; try again in a moment.', { name });
       }
     }
     return "";
@@ -2162,9 +2161,9 @@ const controller = {
   /** Asks before acting on copies that are only a few bytes off; false when declined. */
   async confirmClose(win, count) {
     const text =
-      `${count == 1 ? "A selected message has" : `${count} selected messages have`} no exact copy, only one ` +
-      "that differs by a few bytes from the All Mail entry. It is most likely the same message, which Bridge " +
-      "serves slightly differently in different folders, but this cannot be told for sure. Act on that copy?";
+      count == 1
+        ? t("A selected message has no exact copy, only one that differs by a few bytes from the All Mail entry. It is most likely the same message, which Bridge serves slightly differently in different folders, but this cannot be told for sure. Act on that copy?")
+        : t("{count} selected messages have no exact copy, only one that differs by a few bytes from the All Mail entry. It is most likely the same message, which Bridge serves slightly differently in different folders, but this cannot be told for sure. Act on that copy?", { count });
     try {
       const result = await Services.prompt.asyncConfirm(
         win.top.browsingContext,
@@ -2197,7 +2196,7 @@ const controller = {
   /** One action per window at a time: the server check makes actions take a moment. */
   async perform(win, command, hdrs, destFolder, options) {
     if (win.allMailPlusBusy) {
-      this.notice("The previous action is still running; checking the server can take a few seconds. Nothing else was changed.");
+      this.notice(t("The previous action is still running; checking the server can take a few seconds. Nothing else was changed."));
       return;
     }
     win.allMailPlusBusy = true;
@@ -2219,33 +2218,38 @@ const controller = {
     if (broken) {
       this.rebuildLater(broken.allMail);
       this.notice(
-        `Reading the folders of ${broken.name} failed (${broken.error}), so the add-on cannot tell where the ` +
-          "selected messages really are. Nothing was changed. The index is being built again; try again in a minute."
+        t("Reading the folders of {account} failed ({error}), so the add-on cannot tell where the selected messages really are. Nothing was changed. The index is being built again; try again in a minute.", {
+          account: broken.name,
+          error: broken.error,
+        })
       );
       return;
     }
     if (waiting) {
       this.notice(
-        `${waiting} of ${hdrs.length} selected messages show no folder yet, but not every folder has been loaded ` +
-          "from the server since Thunderbird started. Nothing was changed; try again in a minute."
+        t("{count} of {total} selected messages show no folder yet, but not every folder has been loaded from the server since Thunderbird started. Nothing was changed; try again in a minute.", {
+          count: waiting,
+          total: hdrs.length,
+        })
       );
       return;
     }
     if (failed) {
       this.notice(
-        `${failed} of ${hdrs.length} selected messages could not be matched to exactly one real folder. ` +
-          "Nothing was changed. The folders involved are being synced again, so try again in a few seconds, " +
-          "or use the real folder."
+        t("{count} of {total} selected messages could not be matched to exactly one real folder. Nothing was changed. The folders involved are being synced again, so try again in a few seconds, or use the real folder.", {
+          count: failed,
+          total: hdrs.length,
+        })
       );
       return;
     }
     if (command == "cmd_moveMessage" || command == "cmd_copyMessage") {
       if (this.isAllMail(destFolder)) {
-        this.notice("Messages cannot be moved or copied into All Mail; it already shows every message.");
+        this.notice(t("Messages cannot be moved or copied into All Mail; it already shows every message."));
         return;
       }
       if (this.accountFor(destFolder) && this.describe(destFolder).kind == "container") {
-        this.notice(`"${destFolder.localizedName}" only holds other folders. Pick a folder inside it.`);
+        this.notice(t('"{name}" only holds other folders. Pick a folder inside it.', { name: destFolder.localizedName }));
         return;
       }
     }
@@ -2254,7 +2258,7 @@ const controller = {
         .filter(f => this.accountFor(f))
         .map(f => f.rootFolder);
       if (roots.some(r => !this.archiveFolder(r))) {
-        this.notice("The account has no Archive folder. Nothing was changed.");
+        this.notice(t("The account has no Archive folder. Nothing was changed."));
         return;
       }
     }
@@ -2262,7 +2266,7 @@ const controller = {
     for (const [allMail, list] of this.byFolder(orphans)) {
       const target = this.orphanTarget(allMail, command, destFolder);
       if (target === null) {
-        this.notice(`${list.length} selected messages have no folder and the folder to file them in is missing. Nothing was changed.`);
+        this.notice(t("{count} selected messages have no folder and the folder to file them in is missing. Nothing was changed.", { count: list.length }));
         return;
       }
       if (target && target != allMail) {

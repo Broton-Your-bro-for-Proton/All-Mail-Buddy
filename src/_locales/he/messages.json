@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "תיקייה"
+  },
+  "columnLabels": {
+    "message": "תוויות"
+  },
+  "noFolder": {
+    "message": "ללא תיקייה"
+  },
+  "extensionDescription": {
+    "message": "מציג את התיקייה האמיתית של כל הודעה בתיקיית All Mail של Proton Mail Bridge וגורם למחיקה, להעברה, לארכוב ולספאם לפעול על ההודעה האמיתית."
+  }
+}

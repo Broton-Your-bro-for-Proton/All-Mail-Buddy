@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Složka"
+  },
+  "columnLabels": {
+    "message": "Štítky"
+  },
+  "noFolder": {
+    "message": "Bez složky"
+  },
+  "extensionDescription": {
+    "message": "Zobrazuje skutečnou složku každé zprávy ve složce All Mail Proton Mail Bridge a smazání, přesun, archivace i nevyžádaná pošta pak působí na skutečnou zprávu."
+  }
+}

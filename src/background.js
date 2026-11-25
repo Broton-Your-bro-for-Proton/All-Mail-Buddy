@@ -15,9 +15,12 @@ const columnNames = {
   noFolder: browser.i18n.getMessage("noFolder"),
 };
 
+// The experiment shows its notices and dialogs in Thunderbird's language with this catalog.
+const catalog = I18N.load(browser.i18n.getUILanguage());
+
 const loadConfig = async () => {
   const stored = await browser.storage.local.get(null);
-  const config = { ...DEFAULTS, ...stored, columnNames };
+  const config = { ...DEFAULTS, ...stored, columnNames, catalog: await catalog };
   // Earlier versions had an on/off switch; turned off stays off.
   if (!("verifyMode" in stored) && stored.verifyOnServer === false) {
     config.verifyMode = "never";

@@ -1,0 +1,14 @@
+{
+  "columnFolder": {
+    "message": "Папка"
+  },
+  "columnLabels": {
+    "message": "Ознаки"
+  },
+  "noFolder": {
+    "message": "Без папка"
+  },
+  "extensionDescription": {
+    "message": "Ја прикажува вистинската папка на секоја порака во папката All Mail на Proton Mail Bridge и прави бришењето, преместувањето, архивирањето и несаканата пошта да дејствуваат врз вистинската порака."
+  }
+}
