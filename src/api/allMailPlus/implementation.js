@@ -76,7 +76,7 @@ const controller = {
   timers: new Map(),
   timerStarts: new Map(), // debounce name -> time of the first call since it last ran
   scanning: new Set(), // folder uris whose snapshot is being taken
-  scans: new Map(), // folder uri -> the running scan, so a folder is never read twice at once
+  scans: new Map(), // folder uri -> {account, scan} running, so a folder is never read twice at once
   dirty: new Set(), // folder uris that changed during their snapshot
   pendingSync: false,
   refreshedAt: new Map(), // folder uri -> time of the last targeted sync
@@ -405,18 +405,23 @@ const controller = {
     });
   },
 
-  /** @returns {Promise<boolean>} whether the folder's entries changed */
   scanFolder(account, folder) {
     const running = this.scans.get(folder.URI);
-    if (running) {
+    if (running?.account === account) {
       // Its snapshot may predate the change that asked for this scan, so it runs again afterwards.
       this.dirty.add(folder.URI);
-      return running;
+      return running.scan;
     }
-    const scan = this.timed(`read ${this.describe(folder).name}`, () => this.readFolder(account, folder)).finally(() =>
-      this.scans.delete(folder.URI)
-    );
-    this.scans.set(folder.URI, scan);
+    if (running) {
+      // A rebuild's new index must get the folder itself, after the scan for the old one.
+      return running.scan.then(() => this.scanFolder(account, folder));
+    }
+    const scan = this.timed(`read ${this.describe(folder).name}`, () => this.readFolder(account, folder)).finally(() => {
+      if (this.scans.get(folder.URI)?.scan === scan) {
+        this.scans.delete(folder.URI);
+      }
+    });
+    this.scans.set(folder.URI, { account, scan });
     return scan;
   },
 
@@ -429,7 +434,8 @@ const controller = {
       db = folder.msgDatabase;
     } catch {
       account.unreadable.set(folder.URI, info.name);
-      return account.index.setFolder(folder.URI, info, []);
+      account.index.setFolder(folder.URI, info, []);
+      return;
     }
     // By uri: Folders/Work and Labels/Work share a name.
     account.unreadable.delete(folder.URI);
@@ -450,7 +456,7 @@ const controller = {
         entries.push(this.entryOf(hdr));
       }
     }
-    const changed = account.index.setFolder(folder.URI, info, entries);
+    account.index.setFolder(folder.URI, info, entries);
     this.scanning.delete(folder.URI);
     if (this.dirty.delete(folder.URI)) {
       // Changes arrived while the snapshot was taken and were overwritten.
@@ -461,7 +467,6 @@ const controller = {
         folder.closeDBIfFolderNotOpen(false);
       } catch {}
     }
-    return changed;
   },
 
   entryOf(hdr) {
@@ -474,11 +479,9 @@ const controller = {
       return;
     }
     this.debounce(`scan:${folder.URI}`, 500, async () => {
-      // A load that brought nothing new (most mail checks) needs no new count of All Mail.
-      if (await this.scanFolder(account, folder)) {
-        this.coverageLater(account);
-        this.refreshColumns();
-      }
+      await this.scanFolder(account, folder);
+      this.coverageLater(account);
+      this.refreshColumns();
     });
   },
 
@@ -595,10 +598,15 @@ const controller = {
         }
       }
     } catch (e) {
-      // A partial count would show too few problems and hide orphans: keep the last full one.
+      // A partial count would show too few problems and hide orphans: keep the last full one, and try once more.
       console.error(e);
+      if (!account.countFailed) {
+        account.countFailed = true;
+        this.coverageLater(account);
+      }
       return;
     }
+    account.countFailed = false;
     // As many identical copies as All Mail entries, for example a duplicate or a message
     // sent to yourself: pair them in key order. They are the same message, so which
     // copy goes with which entry does not matter; the column and actions agree on it.
@@ -1898,6 +1906,7 @@ const controller = {
     const orphans = [];
     let failed = 0;
     let waiting = 0;
+    let broken = null; // an account whose index failed, so no match is trusted there
     let close = 0;
     const paired = []; // [All Mail header, real copy] for entries paired with a copy
     for (const hdr of hdrs) {
@@ -1910,6 +1919,10 @@ const controller = {
         }
         if (!account.fullySynced && account.index.resolve(this.entryOf(hdr)).status == "nofolder") {
           waiting++;
+          continue;
+        }
+        if (account.state == "error") {
+          broken = account;
           continue;
         }
         const verified = this.verifiedMatch(account, hdr);
@@ -1929,7 +1942,7 @@ const controller = {
       list.push(real);
       groups.set(real.folder, list);
     }
-    return { groups, orphans, failed, waiting, close, paired };
+    return { groups, orphans, failed, waiting, close, paired, broken };
   },
 
   isOrphan(account, hdr) {
@@ -2202,7 +2215,15 @@ const controller = {
   },
 
   async runAction(win, command, hdrs, destFolder, { confirm = true } = {}) {
-    const { groups, orphans, failed, waiting, close, paired } = this.resolveReal(hdrs);
+    const { groups, orphans, failed, waiting, close, paired, broken } = this.resolveReal(hdrs);
+    if (broken) {
+      this.rebuildLater(broken.allMail);
+      this.notice(
+        `Reading the folders of ${broken.name} failed (${broken.error}), so the add-on cannot tell where the ` +
+          "selected messages really are. Nothing was changed. The index is being built again; try again in a minute."
+      );
+      return;
+    }
     if (waiting) {
       this.notice(
         `${waiting} of ${hdrs.length} selected messages show no folder yet, but not every folder has been loaded ` +

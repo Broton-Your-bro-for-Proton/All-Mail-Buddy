@@ -273,14 +273,3 @@ test("a message new since the last count is not yet without folder", () => {
   assert.equal(searchStatus("unique", true), "unique");
   assert.equal(searchStatus("nofolder", false), "nofolder");
 });
-
-test("setFolder says whether the folder's entries changed", () => {
-  const index = new LocationIndex();
-  const info = { kind: "real", name: "Inbox" };
-  const entries = [{ key: 1, id: "a@x", size: 100, date: 5 }];
-  assert.equal(index.setFolder("inbox", info, entries), true, "first scan");
-  assert.equal(index.setFolder("inbox", info, [{ ...entries[0] }]), false, "same entries");
-  assert.equal(index.setFolder("inbox", info, [{ ...entries[0], size: 101 }]), true, "size changed");
-  assert.equal(index.setFolder("inbox", info, [...entries, { key: 2, id: "b@x", size: 1, date: 1 }]), true, "message added");
-  assert.equal(index.setFolder("inbox", { ...info, name: "Inbox2" }, [...entries, { key: 2, id: "b@x", size: 1, date: 1 }]), true, "renamed");
-});
