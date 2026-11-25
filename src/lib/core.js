@@ -67,12 +67,18 @@ var AllMailCore = (() => {
       return this.folders.has(uri);
     }
 
+    /** @returns {boolean} whether the folder now holds other entries than before */
     setFolder(uri, info, entries) {
+      const old = this.folders.get(uri);
+      const kept = entries.filter(e => e.id);
+      const same = (a, b) => !!a && a.id == b.id && a.size == b.size && a.date == b.date;
+      const unchanged = !!old && old.name == info.name && old.byKey.size == kept.length && kept.every(e => same(old.byKey.get(e.key), e));
       this.removeFolder(uri);
       this.folders.set(uri, { kind: info.kind, name: info.name, byKey: new Map() });
       for (const entry of entries) {
         this.addEntry(uri, entry);
       }
+      return !unchanged;
     }
 
     removeFolder(uri) {

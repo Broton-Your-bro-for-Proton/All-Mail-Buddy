@@ -76,6 +76,7 @@ const controller = {
   timers: new Map(),
   timerStarts: new Map(), // debounce name -> time of the first call since it last ran
   scanning: new Set(), // folder uris whose snapshot is being taken
+  scans: new Map(), // folder uri -> the running scan, so a folder is never read twice at once
   dirty: new Set(), // folder uris that changed during their snapshot
   pendingSync: false,
   refreshedAt: new Map(), // folder uri -> time of the last targeted sync
@@ -146,6 +147,7 @@ const controller = {
     this.timers.clear();
     this.timerStarts.clear();
     this.scanning.clear();
+    this.scans.clear();
     this.dirty.clear();
     this.refreshedAt.clear();
     clearTimeout(this.checkTimer);
@@ -333,7 +335,7 @@ const controller = {
         realUris: new Set(),
         fullySynced: false,
         coverage: null,
-        unreadable: new Set(),
+        unreadable: new Map(), // folder uri -> name
         error: "",
       });
       this.initColumnState(allMail);
@@ -403,8 +405,19 @@ const controller = {
     });
   },
 
+  /** @returns {Promise<boolean>} whether the folder's entries changed */
   scanFolder(account, folder) {
-    return this.timed(`read ${this.describe(folder).name}`, () => this.readFolder(account, folder));
+    const running = this.scans.get(folder.URI);
+    if (running) {
+      // Its snapshot may predate the change that asked for this scan, so it runs again afterwards.
+      this.dirty.add(folder.URI);
+      return running;
+    }
+    const scan = this.timed(`read ${this.describe(folder).name}`, () => this.readFolder(account, folder)).finally(() =>
+      this.scans.delete(folder.URI)
+    );
+    this.scans.set(folder.URI, scan);
+    return scan;
   },
 
   async readFolder(account, folder) {
@@ -415,11 +428,11 @@ const controller = {
     try {
       db = folder.msgDatabase;
     } catch {
-      account.index.setFolder(folder.URI, info, []);
-      account.unreadable.add(info.name);
-      return;
+      account.unreadable.set(folder.URI, info.name);
+      return account.index.setFolder(folder.URI, info, []);
     }
-    account.unreadable.delete(info.name);
+    // By uri: Folders/Work and Labels/Work share a name.
+    account.unreadable.delete(folder.URI);
     const keys = db.listAllKeys();
     this.scanning.add(folder.URI);
     const entries = [];
@@ -437,7 +450,7 @@ const controller = {
         entries.push(this.entryOf(hdr));
       }
     }
-    account.index.setFolder(folder.URI, info, entries);
+    const changed = account.index.setFolder(folder.URI, info, entries);
     this.scanning.delete(folder.URI);
     if (this.dirty.delete(folder.URI)) {
       // Changes arrived while the snapshot was taken and were overwritten.
@@ -448,6 +461,7 @@ const controller = {
         folder.closeDBIfFolderNotOpen(false);
       } catch {}
     }
+    return changed;
   },
 
   entryOf(hdr) {
@@ -460,9 +474,11 @@ const controller = {
       return;
     }
     this.debounce(`scan:${folder.URI}`, 500, async () => {
-      await this.scanFolder(account, folder);
-      this.coverageLater(account);
-      this.refreshColumns();
+      // A load that brought nothing new (most mail checks) needs no new count of All Mail.
+      if (await this.scanFolder(account, folder)) {
+        this.coverageLater(account);
+        this.refreshColumns();
+      }
     });
   },
 
@@ -544,7 +560,12 @@ const controller = {
         if (i % 500 == 499) {
           await new Promise(resolve => setTimeout(resolve, 0));
         }
-        const hdr = db.getMsgHdrForKey(keys[i]);
+        let hdr;
+        try {
+          hdr = db.getMsgHdrForKey(keys[i]);
+        } catch {
+          continue; // removed meanwhile, as in readFolder
+        }
         const entry = this.entryOf(hdr);
         const result = account.index.resolve(entry);
         coverage[result.status]++;
@@ -573,7 +594,11 @@ const controller = {
           countMissing(entry, result);
         }
       }
-    } catch {}
+    } catch (e) {
+      // A partial count would show too few problems and hide orphans: keep the last full one.
+      console.error(e);
+      return;
+    }
     // As many identical copies as All Mail entries, for example a duplicate or a message
     // sent to yourself: pair them in key order. They are the same message, so which
     // copy goes with which entry does not matter; the column and actions agree on it.
@@ -742,7 +767,7 @@ const controller = {
 
   async checkChanges(account) {
     const busy = account.checking || this.repairing.has(account.server.key);
-    if (account.server.type != "imap" || account.state != "ready" || busy) {
+    if (account.server.type != "imap" || account.state != "ready" || busy || Services.io.offline) {
       return;
     }
     account.checking = true;
@@ -776,6 +801,9 @@ const controller = {
     for (const folder of changed) {
       if (await this.updateFolder(folder)) {
         this.markSynced(folder);
+      } else {
+        // Not loaded: the next check must see the change again instead of taking the folder as synced.
+        this.statusSeen.delete(folder.URI);
       }
       if (folder != account.allMail) {
         await this.scanFolder(account, folder);
@@ -1229,7 +1257,7 @@ const controller = {
 
   updateFolder(folder) {
     return this.timed(`load ${this.describe(folder).name} from the server`, () =>
-      this.urlDone(listener => folder.updateFolderWithListener(null, listener), 60000)
+      this.urlDone(listener => folder.QueryInterface(Ci.nsIMsgImapMailFolder).updateFolderWithListener(null, listener), 60000)
     );
   },
 
@@ -1317,7 +1345,10 @@ const controller = {
         return;
       }
       controller.loadWaiters.get(folder.URI)?.(true);
-      controller.markSynced(folder);
+      // Offline Thunderbird loads the local list only, which says nothing about the server.
+      if (!Services.io.offline) {
+        controller.markSynced(folder);
+      }
       if (controller.config.diagnostics && controller.accountFor(folder)) {
         controller.diagnose(`Thunderbird finished loading ${folder.localizedName}`);
       }
@@ -1971,7 +2002,8 @@ const controller = {
     const result = account.index.resolve(entry);
     const paired = result.status == "unique" ? null : this.pairedMatch(account, hdr, result);
     const match = result.status == "unique" ? result.matches[0] : paired?.copy;
-    if (account.state == "indexing" || !match) {
+    // After an error the index lacks folders, so a match there may not be the only copy.
+    if (!["ready", "syncing"].includes(account.state) || !match) {
       return null;
     }
     const { uri, key } = match;
@@ -2358,6 +2390,10 @@ const controller = {
         continue;
       }
       if (settings.manualMarkMode == Ci.nsISpamSettings.MANUAL_MARK_MODE_DELETE) {
+        // In Trash a delete is for good, which marking as junk must not do without asking.
+        if (folder.isSpecialFolder(Flags.Trash, true)) {
+          continue;
+        }
         folder.deleteMessages(list, msgWindow, false, false, listener, true);
         moved = true;
         continue;
@@ -2493,7 +2529,7 @@ const controller = {
           state: account?.state ?? (enabled ? "pending" : "disabled"),
           lastSync: account?.lastSync ?? null,
           coverage: account?.coverage ?? null,
-          unreadable: [...(account?.unreadable ?? [])],
+          unreadable: [...(account?.unreadable?.values() ?? [])],
           serverCheck: account?.serverCheck ?? null,
           lastServerCheck: this.checkState().last[server.key] ?? 0,
           fullySynced: account?.fullySynced ?? false,
