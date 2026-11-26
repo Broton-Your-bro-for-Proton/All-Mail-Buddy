@@ -3,8 +3,8 @@
     "allmailplus@hypercrisis": {
       "updates": [
         {
-          "version": "0.2.15",
-          "update_link": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy/releases/download/v0.2.15/allmail-buddy-0.2.15.xpi",
+          "version": "0.2.16",
+          "update_link": "https://github.com/Broton-Your-bro-for-Proton/All-Mail-Buddy/releases/download/v0.2.16/allmail-buddy-0.2.16.xpi",
           "applications": {
             "gecko": {
               "strict_min_version": "153.0",
