@@ -1059,6 +1059,30 @@ try {
   );
   await screenshot(client, "saved-search");
   await check(
+    "a recount corrects stale counts of the saved search No folder",
+    client,
+    `
+    const saved = root().getChildNamed("No folder (AMB)");
+    const info = saved.msgDatabase.dBFolderInfo;
+    // What the search itself finds, run fresh by opening it.
+    const win = pane();
+    win.displayFolder(saved);
+    await until(() => win.gFolder?.URI == saved.URI && !!win.gDBView, "saved search open");
+    await sleep(1500);
+    const orphans = Array.from({ length: win.gDBView.rowCount }, (_, i) => win.gDBView.getMsgHdrAt(i));
+    const unread = orphans.filter(h => !h.isRead).length;
+    win.displayFolder(folder("Inbox"));
+    // A new message that later turns out to have a folder left such counts behind.
+    info.numMessages = 99;
+    info.numUnreadMessages = 99;
+    saved.updateSummaryTotals(true);
+    folder("All Mail").updateFolder(null);
+    await until(() => saved.getTotalMessages(false) == orphans.length && saved.getNumUnread(false) == unread, "counts corrected").catch(e => {
+      throw new Error(e.message + ": " + saved.getTotalMessages(false) + "/" + saved.getNumUnread(false) + ", expected " + orphans.length + "/" + unread);
+    });
+    `
+  );
+  await check(
     "back to the settings page",
     client,
     `

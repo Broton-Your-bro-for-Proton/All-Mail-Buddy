@@ -653,6 +653,7 @@ const controller = {
     account.coverage = coverage;
     account.orphanIds = orphanIds;
     account.statusByKey = byKey;
+    this.syncNoFolderCounts(account);
     account.differing = differing;
     account.differingUris = new Set(fixable);
     account.doubled = doubled;
@@ -1498,6 +1499,34 @@ const controller = {
       MailUtils.displayFolderIn3Pane(shown.folder.URI);
     }
     return !!shown;
+  },
+
+  /**
+   * Thunderbird updates a saved search's counts only as messages arrive or
+   * change, so a new message whose copy in a real folder was indexed later
+   * kept counting as without folder. Sets the counts from the last count.
+   */
+  syncNoFolderCounts(account) {
+    const folder = account.root.subFolders.find(f => f.getFlag(Flags.Virtual) && f.getStringProperty(SEARCH_MARK) == "nofolder");
+    if (!folder || account.state == "indexing" || account.state == "error") {
+      return;
+    }
+    const db = account.allMail.msgDatabase;
+    let total = 0;
+    let unread = 0;
+    for (const [key, { status }] of account.statusByKey) {
+      if (status == "nofolder") {
+        total++;
+        unread += db.isRead(key) ? 0 : 1;
+      }
+    }
+    const info = folder.msgDatabase.dBFolderInfo;
+    if (info.numMessages != total || info.numUnreadMessages != unread) {
+      info.numMessages = total;
+      info.numUnreadMessages = unread;
+      folder.updateSummaryTotals(true);
+      folder.msgDatabase.commit(Ci.nsMsgDBCommitType.kLargeCommit);
+    }
   },
 
   createNoFolderSearch(account, name) {
